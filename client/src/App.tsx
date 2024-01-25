@@ -1,15 +1,19 @@
 import React from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
-import { Model } from "./Shoe";
+import { OrbitControls, Environment } from "@react-three/drei";
+
+import Arena from "../components/arena";
 
 export default function App() {
   return (
-    <Canvas shadows camera={{ position: [1, 1, 1] }}>
-      <Environment preset="forest" />
-      <Model />
-      <ContactShadows position={[0, 0, 0]} color="#ffffff" />
-      <OrbitControls autoRotate />
+    <Canvas shadows camera={{ position: [6, 6, 6] }}>
+      <Environment background preset="forest" blur={0.05} />
+      <Arena />
+      <OrbitControls
+        enableDamping={true}
+        enableZoom={false}
+        dampingFactor={0.15}
+      />
     </Canvas>
   );
 }
