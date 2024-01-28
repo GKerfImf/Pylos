@@ -1,12 +1,10 @@
-type Index2D = {
-  x: number;
-  y: number;
-};
+import Board from "./board";
 
 type Index3D = {
+  b: Board;
   x: number;
   y: number;
   z: number;
 };
 
-export { Index2D, Index3D };
+export default Index3D;

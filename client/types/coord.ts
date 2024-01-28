@@ -9,4 +9,4 @@ type Coord3D = {
   cZ: number;
 };
 
-export { Coord2D, Coord3D };
+export default Coord3D;

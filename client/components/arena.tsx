@@ -1,256 +1,319 @@
-import React, { useEffect, useState } from "react";
+import React, { useReducer } from "react";
 import Platform from "../components/platform";
-//@ts-ignore
-//@ts-nocheck
-
 import _ from "lodash";
-import {
-  Sphere,
-  BlackSphere,
-  WhiteSphere,
-  GhostSphere,
-  BlackGhostSphere,
-  WhiteGhostSphere,
-} from "../components/spheres";
+import range from "../util/range";
 import cartesian from "../util/cart";
-import { Index2D, Index3D } from "../types/index";
-import { Coord3D } from "../types/coord";
+import Ball from "../types/ball";
+import Board from "../types/board";
+import Player from "../types/player";
+import Index3D from "../types/index";
+import Coord3D from "../types/coord";
+import TypedMap from "../classes/typed_map";
+import { Sphere, GhostSphere } from "../components/spheres";
 
-// TODO: move
-const range = (start: number, end: number): number[] =>
-  Array.from({ length: end - start }, (v, k) => k + start);
+const initCoordinates = () => {
+  const coords = new TypedMap<Index3D, Coord3D>();
 
-enum Player {
-  White,
-  Black,
-}
+  const xs_side = [-2, -1, 0, 1, 2];
+  const ys_side = [3.5, 4.5, 5.5];
+  const indices_side: number[][] = cartesian(range(0, xs_side.length), range(0, ys_side.length));
+  for (let i = 0; i < 15; i++) {
+    const x = indices_side[i][0];
+    const y = indices_side[i][1];
+    coords.set({ b: Board.White, x: x, y: y, z: 0 }, { cX: xs_side[x], cY: ys_side[y], cZ: 0.45 });
+    coords.set({ b: Board.Black, x: x, y: y, z: 0 }, { cX: -xs_side[x], cY: -ys_side[y], cZ: 0.45 });
+  }
 
-interface PlayerBoardProps {
-  player: Player;
-}
+  const indices_mid: number[][] = [4, 3, 2, 1].flatMap((z) =>
+    cartesian(range(0, z), range(0, z)).map((el) => [...el, 4 - z])
+  );
+  const xs_mid = [[1.5, 0.5, -0.5, -1.5], [1, 0, -1], [0.5, -0.5], [0]];
+  const ys_mid = [[-1.5, -0.5, 0.5, 1.5], [-1, 0, 1], [-0.5, 0.5], [0]];
+  for (let i = 0; i < 30; i++) {
+    const x = indices_mid[i][0];
+    const y = indices_mid[i][1];
+    const z = indices_mid[i][2];
+    // [x] and [y] are swapped because I look at this board table from the side
+    coords.set({ b: Board.Main, x: x, y: y, z: z }, { cX: xs_mid[z][y], cY: ys_mid[z][x], cZ: 0.6 + z * 0.707 });
+  }
 
-function PlayerBoard({ player }: PlayerBoardProps) {
-  console.log("[PlayerBoard]");
-  const SIZE_X = 5;
-  const SIZE_Y = 3;
-  const indices: number[][] = cartesian(range(0, SIZE_X), range(0, SIZE_Y));
+  return coords;
+};
+const coords: TypedMap<Index3D, Coord3D> = initCoordinates();
 
-  const initCoordinates = (xs: number[], ys: number[]) => {
-    const coords = new Map<string, Coord3D>(); /* Index2D*/
-    for (let i = 0; i < 15; i++) {
-      const x = indices[i][0];
-      const y = indices[i][1];
-      // Ewwwwwwwww,
-      // TODO: remove JSON?
-      // TODO: why [x] and [y] are swapped?
-      coords.set(JSON.stringify({ x: x, y: y }), {
-        cX: xs[x],
-        cY: ys[y],
-        cZ: 0.45,
-      });
+const initBalls = () => {
+  const balls: Ball[] = [];
+  for (let x = 0; x < 5; x++) {
+    for (let y = 0; y < 3; y++) {
+      balls.push({ player: Player.White, index: { b: Board.White, x: x, y: y, z: 0 } });
+      balls.push({ player: Player.Black, index: { b: Board.Black, x: x, y: y, z: 0 } });
     }
-    return coords;
-  };
-  const coords = // new Map<string /* Index2D*/, Coord3D>();
-    player == Player.White
-      ? initCoordinates([-2, -1, 0, 1, 2], [3.5, 4.5, 5.5])
-      : initCoordinates([2, 1, 0, -1, -2], [-3.5, -4.5, -5.5]);
+  }
+  return balls;
+};
 
-  const getColor = () => {
-    return player == Player.White ? "white" : "black";
-  };
+function findParents(index: Index3D): Index3D[] {
+  if (index.b != Board.Main) {
+    return [];
+  }
+  const { b, x, y, z } = index;
+  const parents = [
+    { b: b, x: x, y: y, z: z + 1 },
+    { b: b, x: x - 1, y: y, z: z + 1 },
+    { b: b, x: x, y: y - 1, z: z + 1 },
+    { b: b, x: x - 1, y: y - 1, z: z + 1 },
+  ]
+    .filter((e) => 0 <= e.x && e.x < 3 - z)
+    .filter((e) => 0 <= e.y && e.y < 3 - z)
+    .filter((e) => 0 <= e.z && e.z < 4);
+  return parents;
+}
 
-  // TODO: optimize if needed
-  const deleteFromSet = (set, el) => {
-    return new Set([...set].filter((x) => !_.isEqual(JSON.parse(x), el)));
-  };
+function parentExists(state, index: Index3D): boolean {
+  return findParents(index)
+    .map((index: Index3D) => isBall(state, index))
+    .some((b) => b);
+}
 
-  const [balls, setBalls] = useState<Set<string>>(new Set()); // Index2D
-  const [ghostBalls, setGhostBalls] = useState<Set<Index2D>>(new Set());
-  const [selectedBall, setSelectedBall] = useState<Index2D | null>(null);
+function isParent(child: Index3D, parent: Index3D): boolean {
+  return findParents(child).filter((i) => _.isEqual(i, parent)).length > 0;
+}
 
-  useEffect(() => {
-    for (let x = 0; x < SIZE_X; x++) {
-      for (let y = 0; y < SIZE_Y; y++) {
-        setBalls((prev) => new Set(prev.add(JSON.stringify({ x: x, y: y }))));
+function findChildren(index: Index3D): Index3D[] {
+  if (index.b != Board.Main) {
+    return [];
+  }
+  const { b, x, y, z } = index;
+  const children = [
+    { b: b, x: x, y: y, z: z - 1 },
+    { b: b, x: x + 1, y: y, z: z - 1 },
+    { b: b, x: x, y: y + 1, z: z - 1 },
+    { b: b, x: x + 1, y: y + 1, z: z - 1 },
+  ]
+    .filter((e) => 0 <= e.x && e.x <= 4 - z)
+    .filter((e) => 0 <= e.y && e.y <= 4 - z)
+    .filter((e) => 0 <= e.z && e.z < 4);
+  return children;
+}
+
+function findBall(state, index: Index3D): Ball | null {
+  const balls: Ball[] = state.balls;
+  const ball = balls.filter((i) => _.isEqual(i.index, index));
+  return ball.length == 0 ? null : ball[0];
+}
+
+function isBall(state, index: Index3D): boolean {
+  return findBall(state, index) == null ? false : true;
+}
+
+function sameColorBalls(state, indices: Index3D[], color: Player): boolean {
+  return indices
+    .map((index: Index3D) => findBall(state, index))
+    .map((ball: Ball | null) => (ball == null ? null : ball.player))
+    .every((player: Player | null) => (player == null ? false : player == color));
+}
+
+function takeDownIsPossible(state, player: Player): boolean {
+  console.debug("[takeDownPossible]");
+  return state.balls
+    .filter((ball: Ball) => _.isEqual(ball.index.b, Board.Main))
+    .filter((ball: Ball) => _.isEqual(ball.player, player))
+    .some((ball: Ball) => !parentExists(state, ball.index));
+}
+
+function hasBallInReserve(state, player: Player): boolean {
+  const board = player == Player.White ? Board.White : Board.Black;
+  return state.balls.some((ball: Ball) => _.isEqual(ball.index.b, board));
+}
+
+function getGhostBalls(state, selectedBall: Ball): Ball[] {
+  if (selectedBall == null) {
+    return [];
+  }
+  if (state?.takeDownRule > 0) {
+    const indices: number[][] = cartesian(range(0, 5), range(0, 3));
+    const balls = indices
+      .map(([x, y, z]: number[]) => {
+        return { b: selectedBall.player == Player.White ? Board.White : Board.Black, x: x, y: y, z: 0 };
+      })
+      .map((index: Index3D) => ({ player: selectedBall.player, index: index }));
+    return balls;
+  }
+
+  const indices: number[][] = [4, 3, 2, 1]
+    .filter((e) => e < 4 - selectedBall.index.z || selectedBall.index.b != Board.Main)
+    .flatMap((z) => cartesian(range(0, z), range(0, z)).map((el) => [...el, 4 - z]));
+  return indices
+    .map(([x, y, z]: number[]) => {
+      return { b: Board.Main, x: x, y: y, z: z };
+    })
+    .filter((index: Index3D) => !isBall(state, index))
+    .filter((index: Index3D) => findChildren(index).every((index: Index3D) => isBall(state, index)))
+    .filter((index: Index3D) => !isParent(selectedBall.index, index))
+    .map((index: Index3D) => ({ player: selectedBall.player, index: index }));
+}
+
+function moveIsPossible(state, player: Player): boolean {
+  if (hasBallInReserve(state, player)) {
+    return true;
+  }
+  return state.balls
+    .filter((ball: Ball) => _.isEqual(ball.player, player))
+    .every((ball: Ball) => getGhostBalls(state, ball).length == 0);
+}
+
+const isClickable = (state, ball: Ball) => {
+  if (ball.player != state.move) {
+    return false;
+  }
+
+  if (state.takeDownRule > 0 && ball.index.b != Board.Main) {
+    return false;
+  }
+
+  if (ball.index.b == Board.White) {
+    return true;
+  }
+  if (ball.index.b == Board.Black) {
+    return true;
+  }
+  return findParents(ball.index).every((index: Index3D) => !isBall(state, index));
+};
+
+function ballsReducer(state, action) {
+  console.debug("[ballsReducer]", action);
+
+  function removeBall(balls: Ball[], ball: Ball) {
+    return balls.filter((i) => !_.isEqual(i, ball));
+  }
+
+  function addBall(balls, ball) {
+    return [...balls, ball];
+  }
+
+  function moveBall(from: Ball, to: Ball) {
+    console.debug("[moveBall]");
+
+    const balls: Ball[] = state.balls;
+
+    const newSelectedBall = null;
+    const newSelectedGhostBall = null;
+    const newBalls: Ball[] = addBall(removeBall(balls, from), to);
+
+    const partialState = {
+      // move : ...
+      // takeDownRule: ...,
+      selectedBall: newSelectedBall,
+      selectedGhostBall: newSelectedGhostBall,
+      balls: newBalls,
+    };
+
+    if (state.takeDownRule > 1 && takeDownIsPossible(partialState, state.move)) {
+      return {
+        takeDownRule: state.takeDownRule - 1,
+        move: state.move,
+        ...partialState,
+      };
+    }
+
+    const squareFormed = findParents(to.index)
+      .map(findChildren)
+      .map((indices: Index3D[]) => sameColorBalls(partialState, indices, to.player))
+      .some((b) => b);
+
+    if (squareFormed && moveIsPossible(partialState, 1 - state.move)) {
+      return {
+        move: state.move,
+        takeDownRule: 2,
+        ...partialState,
+      };
+    }
+
+    return {
+      move: moveIsPossible(partialState, 1 - state.move) ? 1 - state.move : state.move,
+      takeDownRule: 0,
+      ...partialState,
+    };
+  }
+
+  switch (action.type) {
+    case "SelectBall": {
+      return { ...state, selectedBall: action.ball };
+    }
+    case "SelectGhostBall": {
+      if (state.selectedBall == null) {
+        console.error("[selectedBall] should not be null");
       }
+      return moveBall(state.selectedBall, action.ball);
     }
-    // setBalls((prev) => new Set(prev.add(JSON.stringify({ x: 3, y: 2 }))));
-    // setGhostBalls((prev) => new Set(prev.add({ x: 1, y: 1 })));
-  }, []);
+    default: {
+      console.error("Unknown type of action");
+    }
+  }
+  return state;
+}
+
+function Arena() {
+  console.debug("[Arena]");
+
+  const [state, dispatch] = useReducer(ballsReducer, {
+    move: Player.White,
+    takeDownRule: 0,
+    selectedBall: null,
+    selectedGhostBall: null,
+    balls: initBalls(),
+  });
 
   return (
     <group>
-      {Array.from(balls).map((i: string, key) => {
-        const index: Index2D = JSON.parse(i);
-        const { cX, cY, cZ } = coords.get(i)!;
+      {state.balls.map((ball: Ball) => {
+        const { cX, cY, cZ }: Coord3D = coords.get(ball.index)!;
         return (
           <Sphere
-            key={key}
-            isClicked={_.isEqual(index, selectedBall)}
-            isClickable={true}
-            signalClick={() => {
-              if (_.isEqual(selectedBall, index)) {
-                setSelectedBall(null);
-              } else {
-                setSelectedBall(index);
-              }
-            }}
-            color={getColor()}
+            key={JSON.stringify(ball)}
+            id={ball}
+            isClicked={_.isEqual(ball, state.selectedBall)}
+            isClickable={isClickable(state, ball)}
+            color={ball.player == Player.White ? "white" : "black"}
             position={[cX, cZ, cY]}
-          />
-        );
-      })}
-
-      {Array.from(ghostBalls).map((i: Index2D, index) => {
-        const { cX, cY, cZ } = coords.get(JSON.stringify(i))!;
-        return (
-          <GhostSphere
-            key={index}
-            position={[cX, cZ, cY]}
-            color={getColor()}
-            signalClick={() => {
-              if (selectedBall) {
-                setBalls((prev) => deleteFromSet(prev, selectedBall));
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isClickable(state, ball)) {
+                if (_.isEqual(state.selectedBall, ball)) {
+                  dispatch({ type: "SelectBall", ball: null });
+                } else {
+                  dispatch({ type: "SelectBall", ball: ball });
+                }
               }
             }}
           />
         );
       })}
+      {state.selectedBall != null
+        ? getGhostBalls(state, state.selectedBall).map((ball: Ball) => {
+            const { cX, cY, cZ }: Coord3D = coords.get(ball.index)!;
+            return (
+              <GhostSphere
+                key={JSON.stringify(ball)}
+                id={ball}
+                color={state.selectedBall.player == Player.White ? "white" : "black"}
+                position={[cX, cZ, cY]}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dispatch({ type: "SelectGhostBall", ball: ball });
+                }}
+              />
+            );
+          })
+        : null}
     </group>
   );
 }
 
-class MainBoard {
-  SIZE_Z = 4; // Z goes first
-  SIZE_X = 4;
-  SIZE_Y = 4;
-
-  indices: number[][] = [
-    ...cartesian(range(0, 4), range(0, 4)).map((el) => [...el, 0]),
-    ...cartesian(range(0, 3), range(0, 3)).map((el) => [...el, 1]),
-    ...cartesian(range(0, 2), range(0, 2)).map((el) => [...el, 2]),
-    ...cartesian(range(0, 1), range(0, 1)).map((el) => [...el, 3]),
-  ];
-
-  whiteBalls = new Set<Index3D>();
-  blackBalls = new Set<Index3D>();
-  whiteGhostBalls = new Set<Index3D>();
-  blackGhostBalls = new Set<Index3D>();
-
-  coords = new Map<string /* Index3D*/, Coord3D>();
-  #initCoordinates() {
-    const xs = [[1.5, 0.5, -0.5, -1.5], [1, 0, -1], [0.5, -0.5], [0]];
-    const ys = [[-1.5, -0.5, 0.5, 1.5], [-1, 0, 1], [-0.5, 0.5], [0]];
-
-    for (let i = 0; i < 30; i++) {
-      const x = this.indices[i][0];
-      const y = this.indices[i][1];
-      const z = this.indices[i][2];
-      // TODO: remove JSON?
-      // TODO: why [x] and [y] are swapped?
-      this.coords.set(JSON.stringify({ x: x, y: y, z: z }), {
-        cX: xs[z][y],
-        cY: ys[z][x],
-        cZ: 0.6 + z * 0.707,
-      });
-    }
-  }
-
-  constructor() {
-    this.#initCoordinates();
-    // this.blackBalls.add({ x: 0, y: 0, z: 0 });
-    // this.blackBalls.add({ x: 0, y: 1, z: 0 });
-    // this.blackBalls.add({ x: 0, y: 2, z: 0 });
-    this.blackBalls.add({ x: 0, y: 0, z: 1 });
-
-    // this.whiteBalls.add({ x: 1, y: 0, z: 0 });
-    this.whiteBalls.add({ x: 1, y: 1, z: 0 });
-
-    this.whiteGhostBalls.add({ x: 1, y: 0, z: 0 });
-    this.whiteGhostBalls.add({ x: 1, y: 1, z: 0 });
-    this.whiteGhostBalls.add({ x: 1, y: 2, z: 0 });
-    this.whiteGhostBalls.add({ x: 1, y: 3, z: 0 });
-
-    this.blackGhostBalls.add({ x: 0, y: 0, z: 0 });
-    this.blackGhostBalls.add({ x: 0, y: 1, z: 0 });
-    this.blackGhostBalls.add({ x: 0, y: 2, z: 0 });
-    this.blackGhostBalls.add({ x: 0, y: 3, z: 0 });
-  }
-
-  #onClick(i: Index3D) {
-    console.log(i);
-  }
-
-  render() {
-    console.log("[MainBoard]");
-    return (
-      <group>
-        {Array.from(this.whiteBalls).map((i: Index3D) => {
-          const { cX, cY, cZ } = this.coords.get(JSON.stringify(i))!;
-          return (
-            <WhiteSphere
-              key={Math.floor(Math.random() * 1000)}
-              isClicked={false}
-              isClickable={true}
-              signalClick={(e) => {
-                this.#onClick(i);
-              }}
-              position={[cX, cZ, cY]}
-            />
-          );
-        })}
-        {Array.from(this.blackBalls).map((i: Index3D) => {
-          const { cX, cY, cZ } = this.coords.get(JSON.stringify(i))!;
-          return (
-            <BlackSphere
-              key={Math.floor(Math.random() * 1000)}
-              isClicked={false}
-              isClickable={true}
-              signalClick={(e) => {
-                this.#onClick(i);
-              }}
-              position={[cX, cZ, cY]}
-            />
-          );
-        })}
-
-        {Array.from(this.whiteGhostBalls).map((i: Index3D) => {
-          const { cX, cY, cZ } = this.coords.get(JSON.stringify(i))!;
-          return (
-            <WhiteGhostSphere
-              key={Math.floor(Math.random() * 1000)}
-              position={[cX, cZ, cY]}
-            />
-          );
-        })}
-        {Array.from(this.blackGhostBalls).map((i: Index3D) => {
-          const { cX, cY, cZ } = this.coords.get(JSON.stringify(i))!;
-          return (
-            <BlackGhostSphere
-              key={Math.floor(Math.random() * 1000)}
-              position={[cX, cZ, cY]}
-            />
-          );
-        })}
-      </group>
-    );
-  }
-}
-
 export default function App() {
-  // const white = new PlayerBoardClass(Player.White, 1);
-  // const black = new PlayerBoardClass(Player.Black, 1);
-
-  const main = new MainBoard();
-
   return (
     <group>
-      <PlayerBoard player={Player.White} />
-
-      {/* {white.render()} */}
-      {/* {black.render()} */}
-      {main.render()}
+      <Arena />
       <Platform />
     </group>
   );
