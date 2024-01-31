@@ -10,6 +10,7 @@ import Index3D from "../types/index";
 import Coord3D from "../types/coord";
 import TypedMap from "../classes/typed_map";
 import { Sphere, GhostSphere } from "../components/spheres";
+import { useControls } from "leva";
 
 const initCoordinates = () => {
   const coords = new TypedMap<Index3D, Coord3D>();
