@@ -39,7 +39,7 @@ pub enum Request {
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Response {
     GameCreated { game_uuid: String },
-    AvailableGames { available_games: Vec<String> },
+    AvailableGames { game_uuids: Vec<String> },
 }
 
 // ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
@@ -68,7 +68,7 @@ pub async fn health_handler() -> Result<impl Reply> {
 }
 
 async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, games: &Games) {
-    info!("[process_client_msg]: {:?}", msg);
+    info!("[process_client_msg]: {:?} {:?}", client_uuid, msg);
 
     // Parse the message string into a `Request` enum.
     let req: Request = match msg.to_str() {
@@ -100,15 +100,13 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             Response::GameCreated { game_uuid }
         }
         Request::GetAvailableGames {} => {
-            let test: Vec<String> = games
+            let uuids: Vec<String> = games
                 .lock()
                 .await
                 .iter_mut()
-                .map(|(_, game)| game.player_white_uuid.clone().unwrap_or("1".to_string()))
+                .map(|(game_uuid, _)| game_uuid.clone())
                 .collect();
-            Response::AvailableGames {
-                available_games: test,
-            }
+            Response::AvailableGames { game_uuids: uuids }
         }
         Request::JoinGame {} => {
             todo!("implement")

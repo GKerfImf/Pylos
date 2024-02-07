@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React from "react";
 import Menu from "../components/interface/menu";
 import PylosCanvas from "../components/canvas";
-import useWebSocket, { ReadyState } from "react-use-websocket";
-import { BellIcon } from "lucide-react";
 import { WebSocketProvider } from "../contexts/ws-context";
-import { Perf } from "r3f-perf";
+
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 const ActiveGame: React.FC = () => {
   return (
@@ -39,13 +38,30 @@ const ActiveGame: React.FC = () => {
 };
 
 export default function App() {
-  return (
-    <div className="w-full h-full">
-      <WebSocketProvider>
-        <PylosCanvas />
+  const router = createBrowserRouter([
+    {
+      path: "/",
+      element: (
         <div className="absolute inset-0 flex justify-center items-center">
           <Menu />
         </div>
+      ),
+    },
+    // other pages....
+    {
+      path: "/game",
+      element: <PylosCanvas />,
+    },
+  ]);
+
+  return (
+    <div className="w-full h-full">
+      <WebSocketProvider>
+        <RouterProvider router={router} />
+        {/* <PylosCanvas />
+        <div className="absolute inset-0 flex justify-center items-center">
+          <Menu />
+        </div> */}
         {/* <div className="absolute right-0 bottom-0">
         <ActiveGame />
       </div> */}

@@ -10,6 +10,7 @@ import { Slider } from "../ui/slider";
 
 import "../../src/styles.css";
 import { WebSocketContext } from "../../contexts/ws-context";
+import { Link, useNavigate } from "react-router-dom";
 
 const CreateGameTab: React.FC = () => {
   const [time, setTime] = useState(5);
@@ -75,6 +76,8 @@ const CreateGameTab: React.FC = () => {
 const JoinGameTab: React.FC = () => {
   console.log("[JoinGameTab]");
 
+  const navigate = useNavigate();
+
   const ColorIcon: React.FC<{ color: string }> = ({ color }) => {
     switch (color) {
       case "White": {
@@ -120,16 +123,13 @@ const JoinGameTab: React.FC = () => {
       const res = JSON.parse(lastMessage.data);
       if (res.hasOwnProperty("AvailableGames")) {
         setGames(
-          res.AvailableGames.available_games.map((game: any, index: number) => ({
-            user: index,
+          res.AvailableGames.game_uuids.map((game: any, index: number) => ({
+            user: "?",
             side: "Random",
-            time: "0 + 1",
+            time: "?",
           }))
         );
       }
-
-      // .has();
-      // console.log(JSON.parse(lastMessage.data).AvailableGames.available_games);
       // const newGame: TGame = ;
       // setGames((prev: TGame[]) => [...prev, newGame]);
     }
@@ -163,18 +163,18 @@ const JoinGameTab: React.FC = () => {
         </TableHeader>
         <TableBody>
           {games.length > 0
-            ? games.map((data, index) => {
-                return (
-                  <TableRow key={index}>
-                    <TableCell>
-                      <ColorIcon color={data.side} />
-                    </TableCell>
-                    <TableCell>{data.user}</TableCell>
-                    <TableCell>{data.time}</TableCell>
-                    {/* <TableCell className="text-right">$250.00</TableCell> */}
-                  </TableRow>
-                );
-              })
+            ? games.map((data, index) => (
+                // <Link className="w-full" key={index} to={`/game`} legacyBehavior>
+                <TableRow onClick={() => navigate(`/game`)} key={index}>
+                  <TableCell>
+                    <ColorIcon color={data.side} />
+                  </TableCell>
+                  <TableCell>{data.user}</TableCell>
+                  <TableCell>{data.time}</TableCell>
+                  {/* <TableCell className="text-right">$250.00</TableCell> */}
+                </TableRow>
+                // </Link>
+              ))
             : null}
         </TableBody>
       </Table>
