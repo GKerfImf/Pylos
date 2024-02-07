@@ -8,9 +8,8 @@ import Board from "../types/board";
 import Player from "../types/player";
 import Index3D from "../types/index";
 import Coord3D from "../types/coord";
-import TypedMap from "../classes/typed_map";
+import TypedMap from "../types/typed_map";
 import { Sphere, GhostSphere } from "../components/spheres";
-import { useControls } from "leva";
 
 const initCoordinates = () => {
   const coords = new TypedMap<Index3D, Coord3D>();
@@ -70,7 +69,7 @@ function findParents(index: Index3D): Index3D[] {
   return parents;
 }
 
-function parentExists(state, index: Index3D): boolean {
+function parentExists(state: any, index: Index3D): boolean {
   return findParents(index)
     .map((index: Index3D) => isBall(state, index))
     .some((b) => b);
@@ -97,24 +96,24 @@ function findChildren(index: Index3D): Index3D[] {
   return children;
 }
 
-function findBall(state, index: Index3D): Ball | null {
+function findBall(state: any, index: Index3D): Ball | null {
   const balls: Ball[] = state.balls;
   const ball = balls.filter((i) => _.isEqual(i.index, index));
   return ball.length == 0 ? null : ball[0];
 }
 
-function isBall(state, index: Index3D): boolean {
+function isBall(state: any, index: Index3D): boolean {
   return findBall(state, index) == null ? false : true;
 }
 
-function sameColorBalls(state, indices: Index3D[], color: Player): boolean {
+function sameColorBalls(state: any, indices: Index3D[], color: Player): boolean {
   return indices
     .map((index: Index3D) => findBall(state, index))
     .map((ball: Ball | null) => (ball == null ? null : ball.player))
     .every((player: Player | null) => (player == null ? false : player == color));
 }
 
-function takeDownIsPossible(state, player: Player): boolean {
+function takeDownIsPossible(state: any, player: Player): boolean {
   console.debug("[takeDownPossible]");
   return state.balls
     .filter((ball: Ball) => _.isEqual(ball.index.b, Board.Main))
@@ -122,12 +121,12 @@ function takeDownIsPossible(state, player: Player): boolean {
     .some((ball: Ball) => !parentExists(state, ball.index));
 }
 
-function hasBallInReserve(state, player: Player): boolean {
+function hasBallInReserve(state: any, player: Player): boolean {
   const board = player == Player.White ? Board.White : Board.Black;
   return state.balls.some((ball: Ball) => _.isEqual(ball.index.b, board));
 }
 
-function getGhostBalls(state, selectedBall: Ball): Ball[] {
+function getGhostBalls(state: any, selectedBall: Ball): Ball[] {
   if (selectedBall == null) {
     return [];
   }
@@ -154,7 +153,7 @@ function getGhostBalls(state, selectedBall: Ball): Ball[] {
     .map((index: Index3D) => ({ player: selectedBall.player, index: index }));
 }
 
-function moveIsPossible(state, player: Player): boolean {
+function moveIsPossible(state: any, player: Player): boolean {
   if (hasBallInReserve(state, player)) {
     return true;
   }
@@ -163,7 +162,7 @@ function moveIsPossible(state, player: Player): boolean {
     .every((ball: Ball) => getGhostBalls(state, ball).length == 0);
 }
 
-const isClickable = (state, ball: Ball) => {
+const isClickable = (state: any, ball: Ball) => {
   if (ball.player != state.move) {
     return false;
   }
@@ -181,7 +180,7 @@ const isClickable = (state, ball: Ball) => {
   return findParents(ball.index).every((index: Index3D) => !isBall(state, index));
 };
 
-function ballsReducer(state, action) {
+function ballsReducer(state: any, action: any) {
   console.debug("[ballsReducer]", action);
 
   function removeBall(balls: Ball[], ball: Ball) {
