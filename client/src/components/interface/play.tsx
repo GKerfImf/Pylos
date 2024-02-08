@@ -1,16 +1,14 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../ui/card";
-
-import { Button } from "../ui/button";
-import { Label } from "../ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { Slider } from "../ui/slider";
-
-import "../../src/styles.css";
-import { WebSocketContext } from "../../contexts/ws-context";
 import { Link, useNavigate } from "react-router-dom";
+import { Label } from "src/components/ui/label";
+import { Slider } from "src/components/ui/slider";
+import { Button } from "src/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "src/components/ui/table";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "src/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
+import { WebSocketContext } from "src/contexts/ws-context";
+import "src/styles.css";
 
 const CreateGameTab: React.FC = () => {
   const [time, setTime] = useState(5);

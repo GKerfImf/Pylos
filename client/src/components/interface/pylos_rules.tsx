@@ -1,5 +1,5 @@
 import React from "react";
-import "../../src/styles.css";
+import "src/styles.css";
 
 const Rules: React.FC = () => {
   // Thanks to [https://cdn.1j1ju.com/medias/cd/27/c5-pylos-rulebook.pdf]

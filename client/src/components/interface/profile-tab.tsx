@@ -1,6 +1,6 @@
 import React from "react";
-import { Skeleton } from "../ui/skeleton";
-import "../../src/styles.css";
+import { Skeleton } from "src/components/ui/skeleton";
+import "src/styles.css";
 
 const ProfileTab: React.FC = () => {
   return (

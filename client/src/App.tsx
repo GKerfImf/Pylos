@@ -1,7 +1,7 @@
 import React from "react";
-import Menu from "../components/interface/menu";
-import PylosCanvas from "../components/canvas";
-import { WebSocketProvider } from "../contexts/ws-context";
+import Menu from "./components/interface/menu";
+import PylosCanvas from "./components/canvas";
+import { WebSocketProvider } from "./contexts/ws-context";
 
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 

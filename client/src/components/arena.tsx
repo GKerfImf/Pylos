@@ -1,15 +1,15 @@
 import React, { useReducer } from "react";
-import Platform from "../components/platform";
 import _ from "lodash";
-import range from "../util/range";
-import cartesian from "../util/cart";
-import Ball from "../types/ball";
-import Board from "../types/board";
-import Player from "../types/player";
-import Index3D from "../types/index";
-import Coord3D from "../types/coord";
-import TypedMap from "../types/typed_map";
-import { Sphere, GhostSphere } from "../components/spheres";
+import Platform from "src/components/platform";
+import range from "src/util/range";
+import cartesian from "src/util/cart";
+import Ball from "src/types/ball";
+import Board from "src/types/board";
+import Player from "src/types/player";
+import Index3D from "src/types/index";
+import Coord3D from "src/types/coord";
+import TypedMap from "src/types/typed_map";
+import { Sphere, GhostSphere } from "src/components/spheres";
 
 const initCoordinates = () => {
   const coords = new TypedMap<Index3D, Coord3D>();

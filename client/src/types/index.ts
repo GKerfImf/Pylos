@@ -1,4 +1,4 @@
-import Board from "./board";
+import Board from "src/types/board";
 
 type Index3D = {
   b: Board;
