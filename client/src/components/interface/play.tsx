@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Label } from "src/components/ui/label";
 import { Slider } from "src/components/ui/slider";
 import { Button } from "src/components/ui/button";
@@ -14,7 +14,7 @@ const CreateGameTab: React.FC = () => {
   const [time, setTime] = useState(5);
   const [increment, setIncrement] = useState(0);
 
-  const { sendJsonMessage } = useContext(WebSocketContext)!;
+  const { sendMessage } = useContext(WebSocketContext)!;
 
   return (
     <Card>
@@ -63,7 +63,7 @@ const CreateGameTab: React.FC = () => {
         {/*  */}
       </CardContent>
       <CardFooter>
-        <Button onClick={() => sendJsonMessage({ CreateGame: {} })} size="sm">
+        <Button onClick={() => sendMessage(JSON.stringify({ CreateGame: {} }))} size="sm">
           Start
         </Button>
       </CardFooter>
@@ -72,7 +72,7 @@ const CreateGameTab: React.FC = () => {
 };
 
 const JoinGameTab: React.FC = () => {
-  console.log("[JoinGameTab]");
+  console.debug("[JoinGameTab]");
 
   const navigate = useNavigate();
 
@@ -104,16 +104,17 @@ const JoinGameTab: React.FC = () => {
     return null;
   };
 
-  const { sendJsonMessage, lastMessage } = useContext(WebSocketContext)!;
+  const { sendMessage, lastMessage } = useContext(WebSocketContext)!;
 
   type TGame = {
+    game_uuid: String;
     user: String;
     side: "White" | "Black" | "Random";
     time: String;
   };
   const [games, setGames] = useState<TGame[]>([]);
   useEffect(() => {
-    sendJsonMessage({ GetAvailableGames: {} });
+    sendMessage(JSON.stringify({ GetAvailableGames: {} }));
   }, []);
 
   useEffect(() => {
@@ -121,7 +122,8 @@ const JoinGameTab: React.FC = () => {
       const res = JSON.parse(lastMessage.data);
       if (res.hasOwnProperty("AvailableGames")) {
         setGames(
-          res.AvailableGames.game_uuids.map((game: any, index: number) => ({
+          res.AvailableGames.game_uuids.map((game_uuid: any, index: number) => ({
+            game_uuid: game_uuid,
             user: "?",
             side: "Random",
             time: "?",
@@ -162,16 +164,13 @@ const JoinGameTab: React.FC = () => {
         <TableBody>
           {games.length > 0
             ? games.map((data, index) => (
-                // <Link className="w-full" key={index} to={`/game`} legacyBehavior>
-                <TableRow onClick={() => navigate(`/game`)} key={index}>
+                <TableRow onClick={() => navigate(`/games/${data.game_uuid}`)} key={index}>
                   <TableCell>
                     <ColorIcon color={data.side} />
                   </TableCell>
                   <TableCell>{data.user}</TableCell>
                   <TableCell>{data.time}</TableCell>
-                  {/* <TableCell className="text-right">$250.00</TableCell> */}
                 </TableRow>
-                // </Link>
               ))
             : null}
         </TableBody>

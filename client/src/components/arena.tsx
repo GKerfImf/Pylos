@@ -1,4 +1,4 @@
-import React, { useReducer } from "react";
+import React, { useContext, useEffect, useReducer } from "react";
 import _ from "lodash";
 import Platform from "src/components/platform";
 import range from "src/util/range";
@@ -10,6 +10,8 @@ import Index3D from "src/types/index";
 import Coord3D from "src/types/coord";
 import TypedMap from "src/types/typed_map";
 import { Sphere, GhostSphere } from "src/components/spheres";
+import { WebSocketContext } from "src/contexts/ws-context";
+import { useParams } from "react-router-dom";
 
 const initCoordinates = () => {
   const coords = new TypedMap<Index3D, Coord3D>();
@@ -163,7 +165,7 @@ function moveIsPossible(state: any, player: Player): boolean {
 }
 
 const isClickable = (state: any, ball: Ball) => {
-  if (ball.player != state.move) {
+  if (ball.player != state.turn) {
     return false;
   }
 
@@ -187,7 +189,7 @@ function ballsReducer(state: any, action: any) {
     return balls.filter((i) => !_.isEqual(i, ball));
   }
 
-  function addBall(balls, ball) {
+  function addBall(balls: any, ball: any) {
     return [...balls, ball];
   }
 
@@ -201,17 +203,18 @@ function ballsReducer(state: any, action: any) {
     const newBalls: Ball[] = addBall(removeBall(balls, from), to);
 
     const partialState = {
-      // move : ...
+      // turn : ...
       // takeDownRule: ...,
+      nmove: state.nmove + 1,
       selectedBall: newSelectedBall,
       selectedGhostBall: newSelectedGhostBall,
       balls: newBalls,
     };
 
-    if (state.takeDownRule > 1 && takeDownIsPossible(partialState, state.move)) {
+    if (state.takeDownRule > 1 && takeDownIsPossible(partialState, state.turn)) {
       return {
         takeDownRule: state.takeDownRule - 1,
-        move: state.move,
+        turn: state.turn,
         ...partialState,
       };
     }
@@ -221,16 +224,16 @@ function ballsReducer(state: any, action: any) {
       .map((indices: Index3D[]) => sameColorBalls(partialState, indices, to.player))
       .some((b) => b);
 
-    if (squareFormed && moveIsPossible(partialState, 1 - state.move)) {
+    if (squareFormed && moveIsPossible(partialState, 1 - state.turn)) {
       return {
-        move: state.move,
+        turn: state.turn,
         takeDownRule: 2,
         ...partialState,
       };
     }
 
     return {
-      move: moveIsPossible(partialState, 1 - state.move) ? 1 - state.move : state.move,
+      turn: moveIsPossible(partialState, 1 - state.turn) ? 1 - state.turn : state.turn,
       takeDownRule: 0,
       ...partialState,
     };
@@ -246,6 +249,10 @@ function ballsReducer(state: any, action: any) {
       }
       return moveBall(state.selectedBall, action.ball);
     }
+    case "SetGameState": {
+      // console.log("hi", action.new_state);
+      return action.new_state;
+    }
     default: {
       console.error("Unknown type of action");
     }
@@ -255,14 +262,39 @@ function ballsReducer(state: any, action: any) {
 
 function Arena() {
   console.debug("[Arena]");
+  let { id } = useParams();
 
   const [state, dispatch] = useReducer(ballsReducer, {
-    move: Player.White,
+    nmove: 1,
+    turn: Player.White,
     takeDownRule: 0,
     selectedBall: null,
     selectedGhostBall: null,
     balls: initBalls(),
   });
+
+  const { sendMessage, lastMessage } = useContext(WebSocketContext)!;
+
+  useEffect(() => {
+    sendMessage(JSON.stringify({ GetGameState: { game_uuid: id } }));
+  }, []);
+  useEffect(() => {
+    if (lastMessage != null) {
+      console.log(lastMessage.data);
+      const res = JSON.parse(lastMessage.data);
+      if (res.hasOwnProperty("GameState")) {
+        dispatch({ type: "SetGameState", new_state: res.GameState.game_state });
+      }
+    }
+  }, [lastMessage]);
+
+  // Sends the current state to the server
+  useEffect(() => {
+    const updateGameStateOnServer = () => {
+      sendMessage(JSON.stringify({ SetGameState: { game_uuid: id, game_state: state } }));
+    };
+    updateGameStateOnServer();
+  }, [state]);
 
   return (
     <group>
@@ -276,7 +308,7 @@ function Arena() {
             isClickable={isClickable(state, ball)}
             color={ball.player == Player.White ? "white" : "black"}
             position={[cX, cZ, cY]}
-            onClick={(e) => {
+            onClick={(e: any) => {
               e.stopPropagation();
               if (isClickable(state, ball)) {
                 if (_.isEqual(state.selectedBall, ball)) {
@@ -298,7 +330,7 @@ function Arena() {
                 id={ball}
                 color={state.selectedBall.player == Player.White ? "white" : "black"}
                 position={[cX, cZ, cY]}
-                onClick={(e) => {
+                onClick={(e: any) => {
                   e.stopPropagation();
                   dispatch({ type: "SelectGhostBall", ball: ball });
                 }}

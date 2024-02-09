@@ -14,16 +14,18 @@ import {
 } from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import { Perf } from "r3f-perf";
+import { useParams } from "react-router-dom";
 
 // TODO: function --> const
 export default function PylosCanvas() {
-  const [effects, setEffects] = useState(true);
+  let { id } = useParams();
+
+  const [effects, setEffects] = useState(false);
 
   return (
     <div className="w-full h-full">
       <Canvas shadows camera={{ position: [-8, 8, 0] }}>
-        <Perf />
-
+        {/* <Perf /> */}
         <Environment background preset="forest" blur={1} />
         <ambientLight intensity={0.5} />
         <Arena />

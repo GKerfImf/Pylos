@@ -14,8 +14,8 @@ const ActiveGame: React.FC = () => {
         <div className="flex-1 space-y-1">
           <p className="text-sm font-bold leading-none text-muted-foreground">anon304</p>
           <p className="text-sm text-muted-foreground">Send notifications to device.</p>
-          <p className="text-sm text-muted-foreground">Send notifications to device.</p>
-          <p className="text-sm text-muted-foreground">Send notifications to device.</p>
+          {/* <p className="text-sm text-muted-foreground">Send notifications to device.</p>
+          <p className="text-sm text-muted-foreground">Send notifications to device.</p> */}
         </div>
         <div className="h-10 w-10 rounded-full bg-slate-100" />
       </div>
@@ -24,10 +24,10 @@ const ActiveGame: React.FC = () => {
         <div className="flex-1 space-y-1">
           <p className="text-sm font-bold leading-none text-muted-foreground">anon534</p>
           <p className="text-sm text-muted-foreground">Send notifications to device.</p>
+          {/* <p className="text-sm text-muted-foreground">Send notifications to device.</p>
           <p className="text-sm text-muted-foreground">Send notifications to device.</p>
           <p className="text-sm text-muted-foreground">Send notifications to device.</p>
-          <p className="text-sm text-muted-foreground">Send notifications to device.</p>
-          <p className="text-sm text-muted-foreground">Send notifications to device.</p>
+          <p className="text-sm text-muted-foreground">Send notifications to device.</p> */}
         </div>
         <div className="h-10 w-10 rounded-full bg-slate-900" />
       </div>
@@ -49,8 +49,15 @@ export default function App() {
     },
     // other pages....
     {
-      path: "/game",
-      element: <PylosCanvas />,
+      path: "/games/:id",
+      element: (
+        <div className="w-full h-full">
+          <PylosCanvas />
+          <div className="absolute right-0 top-0">
+            <ActiveGame />
+          </div>
+        </div>
+      ),
     },
   ]);
 
@@ -62,9 +69,6 @@ export default function App() {
         <div className="absolute inset-0 flex justify-center items-center">
           <Menu />
         </div> */}
-        {/* <div className="absolute right-0 bottom-0">
-        <ActiveGame />
-      </div> */}
       </WebSocketProvider>
     </div>
   );

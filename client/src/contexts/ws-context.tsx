@@ -48,7 +48,7 @@ const unregisterClient = async (userUUID: string) => {
 
 type WebSocketContextProps = {
   connectionStatus: String;
-  sendJsonMessage: SendMessage;
+  sendMessage: SendMessage;
   lastMessage: MessageEvent<any> | null;
 };
 
@@ -82,7 +82,7 @@ function WebSocketProvider({ children }: { children: any }) {
     setSocketUrl(`ws://127.0.0.1:8000/ws/${clientUUID}`);
   }, [userUUID, clientUUID]);
 
-  const { sendJsonMessage, lastMessage, readyState } = useWebSocket<string>(socketUrl);
+  const { sendMessage, lastMessage, readyState } = useWebSocket<string>(socketUrl);
   const connectionStatus = {
     [ReadyState.CONNECTING]: "Connecting",
     [ReadyState.OPEN]: "Open",
@@ -92,7 +92,7 @@ function WebSocketProvider({ children }: { children: any }) {
   }[readyState];
 
   return (
-    <WebSocketContext.Provider value={{ connectionStatus, sendJsonMessage, lastMessage }}>
+    <WebSocketContext.Provider value={{ connectionStatus, sendMessage, lastMessage }}>
       {children}
     </WebSocketContext.Provider>
   );

@@ -1,7 +1,8 @@
 use futures::{FutureExt, StreamExt};
 use http::{Method, StatusCode};
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 use serde_json::from_str;
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
 use tokio::sync::{mpsc, Mutex};
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -12,6 +13,68 @@ use warp::{
     Filter,
 };
 use warp::{reject::Rejection, reply::Reply};
+
+// ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
+//                                     Game State                                     //
+// ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
+
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone)]
+#[repr(u8)]
+pub enum Side {
+    White = 0,
+    Black = 1,
+}
+
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone)]
+#[repr(u8)]
+pub enum Board {
+    White = 0,
+    Black = 1,
+    Main = 2,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+pub struct Index {
+    b: Board,
+    x: u8,
+    y: u8,
+    z: u8,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+pub struct Ball {
+    player: Side,
+    index: Index,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+pub struct GameState {
+    // TODO: rename BoardState?
+    nmove: u8,
+    turn: Side,
+    takeDownRule: u8,                // TODO: rename
+    selectedBall: Option<Ball>,      // TODO: rename
+    selectedGhostBall: Option<Ball>, // TODO: rename
+    balls: Vec<Ball>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Client {
+    pub user_uuid: String,
+    pub sender: Option<mpsc::UnboundedSender<std::result::Result<Message, warp::Error>>>,
+}
+type Clients = Arc<Mutex<HashMap<String, Client>>>;
+
+#[derive(Debug, Clone)]
+pub struct Game {
+    pub player_white_uuid: Option<String>,
+    pub player_black_uuid: Option<String>,
+    pub watching_client_uuids: Vec<String>,
+    pub state: Option<GameState>, // TODO: del option
+}
+type Games = Arc<Mutex<HashMap<String, Game>>>;
+
+type Result<T> = std::result::Result<T, Rejection>;
 
 // ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
 //                                        HTTP                                        //
@@ -34,31 +97,21 @@ pub enum Request {
     CreateGame {},
     JoinGame {},
     GetAvailableGames {},
+    GetGameState {
+        game_uuid: String,
+    },
+    SetGameState {
+        game_uuid: String,
+        game_state: GameState,
+    },
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Response {
     GameCreated { game_uuid: String },
     AvailableGames { game_uuids: Vec<String> },
+    GameState { game_state: Option<GameState> },
 }
-
-// ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
-
-#[derive(Debug, Clone)]
-pub struct Client {
-    pub user_uuid: String,
-    pub sender: Option<mpsc::UnboundedSender<std::result::Result<Message, warp::Error>>>,
-}
-type Clients = Arc<Mutex<HashMap<String, Client>>>;
-
-#[derive(Debug, Clone)]
-pub struct Game {
-    pub player_white_uuid: Option<String>,
-    pub player_black_uuid: Option<String>,
-}
-type Games = Arc<Mutex<HashMap<String, Game>>>;
-
-type Result<T> = std::result::Result<T, Rejection>;
 
 // ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
 
@@ -95,10 +148,13 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
                 Game {
                     player_white_uuid: None,
                     player_black_uuid: None,
+                    watching_client_uuids: vec![],
+                    state: None,
                 },
             );
             Response::GameCreated { game_uuid }
         }
+        // TODO: make it a separate function
         Request::GetAvailableGames {} => {
             let uuids: Vec<String> = games
                 .lock()
@@ -108,6 +164,45 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
                 .collect();
             Response::AvailableGames { game_uuids: uuids }
         }
+        // TODO: make it a separate function
+        Request::SetGameState {
+            game_uuid,
+            game_state,
+        } => {
+            // Validation
+            match games.lock().await.get(&game_uuid).unwrap().state.clone() {
+                Some(state) => {
+                    if state.nmove >= game_state.nmove {
+                        warn!("Received a bad update, reject"); // TODO
+                        return;
+                    }
+                }
+                None => {}
+            }
+
+            // Update
+            let mut locked = games.lock().await;
+            match locked.get_mut(&game_uuid) {
+                Some(game) => {
+                    game.state = Some(game_state.clone());
+                }
+                None => {
+                    warn!("Game uuid does not exists {}", game_uuid);
+                    return;
+                }
+            };
+            Response::GameState {
+                game_state: Some(game_state),
+            }
+        }
+        // TODO: make it a separate function
+        Request::GetGameState { game_uuid } => {
+            // TODO: fix unwraps and clones
+            Response::GameState {
+                game_state: games.lock().await.get(&game_uuid).unwrap().state.clone(),
+            }
+        }
+        // TODO: make it a separate function
         Request::JoinGame {} => {
             todo!("implement")
         }
