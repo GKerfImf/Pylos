@@ -48,8 +48,7 @@ pub struct Ball {
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
-pub struct GameState {
-    // TODO: rename BoardState?
+pub struct BoardState {
     nmove: u8,
     turn: Side,
     takeDownRule: u8,                // TODO: rename
@@ -70,7 +69,7 @@ pub struct Game {
     pub player_white_uuid: Option<String>,
     pub player_black_uuid: Option<String>,
     pub watching_client_uuids: Vec<String>,
-    pub state: Option<GameState>, // TODO: del option
+    pub state: BoardState,
 }
 type Games = Arc<Mutex<HashMap<String, Game>>>;
 
@@ -101,8 +100,9 @@ pub enum Request {
         game_uuid: String,
     },
     SetGameState {
+        // TODO: rename [SetBoardState]
         game_uuid: String,
-        game_state: GameState,
+        game_state: BoardState,
     },
 }
 
@@ -110,7 +110,7 @@ pub enum Request {
 pub enum Response {
     GameCreated { game_uuid: String },
     AvailableGames { game_uuids: Vec<String> },
-    GameState { game_state: Option<GameState> },
+    GameState { game_state: BoardState }, // TODO: rename [BoardState]
 }
 
 // ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
@@ -118,6 +118,46 @@ pub enum Response {
 pub async fn health_handler() -> Result<impl Reply> {
     info!("[health_handler]");
     Ok(StatusCode::OK)
+}
+
+fn initialize_board_state() -> BoardState {
+    let balls: Vec<Ball> = (0..5)
+        .flat_map(|x| {
+            (0..3)
+                .flat_map(|y| {
+                    vec![
+                        Ball {
+                            player: Side::White,
+                            index: Index {
+                                b: Board::White,
+                                x: x,
+                                y: y,
+                                z: 0,
+                            },
+                        },
+                        Ball {
+                            player: Side::Black,
+                            index: Index {
+                                b: Board::Black,
+                                x: x,
+                                y: y,
+                                z: 0,
+                            },
+                        },
+                    ]
+                })
+                .collect::<Vec<Ball>>()
+        })
+        .collect();
+
+    BoardState {
+        nmove: 1,
+        turn: Side::White,
+        takeDownRule: 0,
+        selectedBall: None,
+        selectedGhostBall: None,
+        balls,
+    }
 }
 
 async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, games: &Games) {
@@ -149,7 +189,7 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
                     player_white_uuid: None,
                     player_black_uuid: None,
                     watching_client_uuids: vec![],
-                    state: None,
+                    state: initialize_board_state(),
                 },
             );
             Response::GameCreated { game_uuid }
@@ -170,21 +210,17 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             game_state,
         } => {
             // Validation
-            match games.lock().await.get(&game_uuid).unwrap().state.clone() {
-                Some(state) => {
-                    if state.nmove >= game_state.nmove {
-                        warn!("Received a bad update, reject"); // TODO
-                        return;
-                    }
-                }
-                None => {}
+            let current_game_state = games.lock().await.get(&game_uuid).unwrap().state.clone();
+            if current_game_state.nmove >= game_state.nmove {
+                warn!("Received a bad update, reject"); // TODO
+                return;
             }
 
             // Update
             let mut locked = games.lock().await;
             match locked.get_mut(&game_uuid) {
                 Some(game) => {
-                    game.state = Some(game_state.clone());
+                    game.state = game_state.clone();
                 }
                 None => {
                     warn!("Game uuid does not exists {}", game_uuid);
@@ -192,7 +228,7 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
                 }
             };
             Response::GameState {
-                game_state: Some(game_state),
+                game_state: game_state,
             }
         }
         // TODO: make it a separate function

@@ -43,17 +43,6 @@ const initCoordinates = () => {
 };
 const coords: TypedMap<Index3D, Coord3D> = initCoordinates();
 
-const initBalls = () => {
-  const balls: Ball[] = [];
-  for (let x = 0; x < 5; x++) {
-    for (let y = 0; y < 3; y++) {
-      balls.push({ player: Player.White, index: { b: Board.White, x: x, y: y, z: 0 } });
-      balls.push({ player: Player.Black, index: { b: Board.Black, x: x, y: y, z: 0 } });
-    }
-  }
-  return balls;
-};
-
 function findParents(index: Index3D): Index3D[] {
   if (index.b != Board.Main) {
     return [];
@@ -265,12 +254,12 @@ function Arena() {
   let { id } = useParams();
 
   const [state, dispatch] = useReducer(ballsReducer, {
-    nmove: 1,
-    turn: Player.White,
-    takeDownRule: 0,
+    nmove: null,
+    turn: null,
+    takeDownRule: null,
     selectedBall: null,
     selectedGhostBall: null,
-    balls: initBalls(),
+    balls: [],
   });
 
   const { sendMessage, lastMessage } = useContext(WebSocketContext)!;
@@ -293,7 +282,9 @@ function Arena() {
     const updateGameStateOnServer = () => {
       sendMessage(JSON.stringify({ SetGameState: { game_uuid: id, game_state: state } }));
     };
-    updateGameStateOnServer();
+    if (state.nmove != null) {
+      updateGameStateOnServer();
+    }
   }, [state]);
 
   return (
