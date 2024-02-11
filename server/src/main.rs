@@ -160,6 +160,15 @@ fn initialize_board_state() -> BoardState {
     }
 }
 
+fn initialize_game_state() -> Game {
+    Game {
+        player_white_uuid: None,
+        player_black_uuid: None,
+        watching_client_uuids: vec![],
+        state: initialize_board_state(),
+    }
+}
+
 async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, games: &Games) {
     info!("[process_client_msg]: {:?} {:?}", client_uuid, msg);
 
@@ -185,12 +194,7 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             let game_uuid: String = Uuid::new_v4().simple().to_string();
             games.lock().await.insert(
                 game_uuid.clone(),
-                Game {
-                    player_white_uuid: None,
-                    player_black_uuid: None,
-                    watching_client_uuids: vec![],
-                    state: initialize_board_state(),
-                },
+                initialize_game_state()
             );
             Response::GameCreated { game_uuid }
         }
