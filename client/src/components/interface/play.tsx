@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "src/components/ui/table";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "src/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
-import { WebSocketContext } from "src/contexts/ws-context";
+import { TAvailableGames, WebSocketContext } from "src/contexts/ws-context";
 import "src/styles.css";
 
 const CreateGameTab: React.FC = () => {
@@ -104,7 +104,7 @@ const JoinGameTab: React.FC = () => {
     return null;
   };
 
-  const { sendMessage, lastMessage } = useContext(WebSocketContext)!;
+  const { sendMessage, subscribe, unsubscribe } = useContext(WebSocketContext)!;
 
   type TGame = {
     game_uuid: String;
@@ -118,22 +118,20 @@ const JoinGameTab: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (lastMessage != null) {
-      const res = JSON.parse(lastMessage.data);
-      if (res.hasOwnProperty("AvailableGames")) {
-        setGames(
-          res.AvailableGames.game_uuids.map((game_uuid: any, index: number) => ({
-            game_uuid: game_uuid,
-            user: "?",
-            side: "Random",
-            time: "?",
-          }))
-        );
-      }
-      // const newGame: TGame = ;
-      // setGames((prev: TGame[]) => [...prev, newGame]);
-    }
-  }, [lastMessage]);
+    subscribe("AvailableGames", "JoinGameTab", (req: TAvailableGames) => {
+      setGames(
+        req.AvailableGames.game_uuids.map((game_uuid: any, index: number) => ({
+          game_uuid: game_uuid,
+          user: "?",
+          side: "Random",
+          time: "?",
+        }))
+      );
+    });
+    return () => {
+      unsubscribe("AvailableGames", "JoinGameTab");
+    };
+  });
 
   return (
     <Card>

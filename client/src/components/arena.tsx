@@ -10,7 +10,7 @@ import Index3D from "src/types/index";
 import Coord3D from "src/types/coord";
 import TypedMap from "src/types/typed_map";
 import { Sphere, GhostSphere } from "src/components/spheres";
-import { WebSocketContext } from "src/contexts/ws-context";
+import { TGameState, WebSocketContext } from "src/contexts/ws-context";
 import { useParams } from "react-router-dom";
 
 const initCoordinates = () => {
@@ -262,20 +262,21 @@ function Arena() {
     balls: [],
   });
 
-  const { sendMessage, lastMessage } = useContext(WebSocketContext)!;
+  const { sendMessage, subscribe, unsubscribe } = useContext(WebSocketContext)!;
 
   useEffect(() => {
     sendMessage(JSON.stringify({ GetGameState: { game_uuid: id } }));
   }, []);
+
   useEffect(() => {
-    if (lastMessage != null) {
-      console.log(lastMessage.data);
-      const res = JSON.parse(lastMessage.data);
-      if (res.hasOwnProperty("GameState")) {
-        dispatch({ type: "SetGameState", new_state: res.GameState.game_state });
-      }
-    }
-  }, [lastMessage]);
+    subscribe("GameState", "Arena", (req: TGameState) => {
+      dispatch({ type: "SetGameState", new_state: req.GameState.game_state });
+    });
+
+    return () => {
+      unsubscribe("GameState", "Arena");
+    };
+  }, []);
 
   // Sends the current state to the server
   useEffect(() => {

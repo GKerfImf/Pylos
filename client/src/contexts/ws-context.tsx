@@ -1,5 +1,6 @@
-import React, { createContext, useEffect, useState } from "react";
+import React, { createContext, useEffect, useRef, useState } from "react";
 import useWebSocket, { ReadyState, SendMessage } from "react-use-websocket";
+import { z } from "zod";
 
 const generateUserUUID = (callback: (_: string) => void) => {
   // https://hitchhikers.yext.com/guides/analyze-trends-with-visitor-analytics/07-cookies-visitors/
@@ -46,10 +47,21 @@ const unregisterClient = async (userUUID: string) => {
 
 //
 
+const AvailableGames = z.object({
+  AvailableGames: z.object({ game_uuids: z.array(z.string()) }),
+});
+const GameCreated = z.object({ GameCreated: z.any() });
+const GameState = z.object({ GameState: z.object({ game_state: z.any() }) });
+
+type TAvailableGames = z.infer<typeof AvailableGames>;
+type TGameCreated = z.infer<typeof GameCreated>;
+type TGameState = z.infer<typeof GameState>;
+
 type WebSocketContextProps = {
+  subscribe: (channel: string, id: string, b: any) => void;
+  unsubscribe: (channel: string, id: string) => void;
   connectionStatus: String;
   sendMessage: SendMessage;
-  lastMessage: MessageEvent<any> | null;
 };
 
 const WebSocketContext = createContext<WebSocketContextProps | null>(null);
@@ -91,11 +103,61 @@ function WebSocketProvider({ children }: { children: any }) {
     [ReadyState.UNINSTANTIATED]: "Uninstantiated",
   }[readyState];
 
+  const channels = useRef<Map<string, Map<string, any>>>(new Map());
+  const subscribe = (channel: string, id: string, callback: (a: any) => void) => {
+    console.log("[subscribe]", channel, id);
+    if (!channels.current.has(channel)) {
+      channels.current.set(channel, new Map());
+    }
+    channels.current.get(channel)?.set(id, callback);
+    console.log("[subscribe]", channels.current.get(channel));
+  };
+
+  const unsubscribe = (channel: string, id: string) => {
+    console.log("[unsubscribe]", channel, id);
+    if (channels.current.has(channel)) {
+      channels.current.get(channel)?.delete(id);
+    }
+    console.log("[unsubscribe]", channels.current.get(channel));
+  };
+
+  useEffect(() => {
+    if (lastMessage != null) {
+      const untyped_req = JSON.parse(lastMessage.data);
+      switch (Object.keys(untyped_req)[0]) {
+        case "AvailableGames": {
+          const req = AvailableGames.parse(untyped_req) as TAvailableGames;
+          if (channels.current.has("AvailableGames")) {
+            channels.current.get("AvailableGames")!.forEach((f) => f(req));
+          }
+          break;
+        }
+        case "GameCreated": {
+          const req = GameCreated.parse(untyped_req) as TGameCreated;
+          if (channels.current.has("GameCreated")) {
+            channels.current.get("GameCreated")!.forEach((f) => f(req));
+          }
+          break;
+        }
+        case "GameState": {
+          const req = GameState.parse(untyped_req) as TGameState;
+          if (channels.current.has("GameState")) {
+            channels.current.get("GameState")!.forEach((f) => f(req));
+          }
+          break;
+        }
+        default: {
+          console.warn("Unknown request", lastMessage.data);
+        }
+      }
+    }
+  }, [lastMessage]);
+
   return (
-    <WebSocketContext.Provider value={{ connectionStatus, sendMessage, lastMessage }}>
+    <WebSocketContext.Provider value={{ subscribe, unsubscribe, connectionStatus, sendMessage }}>
       {children}
     </WebSocketContext.Provider>
   );
 }
 
-export { WebSocketContext, WebSocketProvider };
+export { WebSocketContext, WebSocketProvider, TAvailableGames, TGameState };
