@@ -1,6 +1,7 @@
 use futures::{FutureExt, StreamExt};
 use http::{Method, StatusCode};
 use log::{debug, error, info, warn};
+use rand::Rng;
 use serde_json::from_str;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
@@ -257,6 +258,19 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             match locked.get_mut(&game_uuid) {
                 Some(game) => {
                     game.watching.push(client_uuid.to_string());
+
+                    if game.watching.len() == 2 {
+                        // TODO: For now, let's assume that we always assign random colors to players
+                        assert!(game.player_white == None);
+                        assert!(game.player_black == None);
+
+                        let mut rng = rand::thread_rng();
+                        let r: usize = rng.gen();
+                        let (iw, ib) = ((0 + r) % 2, (1 + r) % 2);
+
+                        game.player_white = Some(game.watching[iw].clone());
+                        game.player_black = Some(game.watching[ib].clone());
+                    }
                 }
                 None => {
                     warn!("Game uuid does not exists {}", game_uuid);
