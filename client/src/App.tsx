@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useState } from "react";
 import Menu from "./components/interface/menu";
 import PylosCanvas from "./components/canvas";
-import { TGameState, WebSocketContext, WebSocketProvider } from "./contexts/ws-context";
+import { WebSocketContext, WebSocketProvider } from "./contexts/ws-context";
 
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Player from "./types/player";
 import { cn } from "./util/cn";
+import { TGameState } from "./types/response";
 
 const ActiveGame: React.FC = () => {
   const [currentTurn, setCurrentTurn] = useState(Player.White);

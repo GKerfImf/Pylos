@@ -10,8 +10,9 @@ import Index3D from "src/types/index";
 import Coord3D from "src/types/coord";
 import TypedMap from "src/types/typed_map";
 import { Sphere, GhostSphere } from "src/components/spheres";
-import { TGameState, WebSocketContext } from "src/contexts/ws-context";
+import { WebSocketContext } from "src/contexts/ws-context";
 import { useParams } from "react-router-dom";
+import { TGameState } from "src/types/response";
 
 const initCoordinates = () => {
   const coords = new TypedMap<Index3D, Coord3D>();
@@ -262,11 +263,11 @@ function Arena() {
     balls: [],
   });
 
-  const { sendMessage, subscribe, unsubscribe } = useContext(WebSocketContext)!;
+  const { send, subscribe, unsubscribe } = useContext(WebSocketContext)!;
 
   useEffect(() => {
-    sendMessage(JSON.stringify({ JoinGame: { game_uuid: id } }));
-    sendMessage(JSON.stringify({ GetGameState: { game_uuid: id } }));
+    send({ JoinGame: { game_uuid: id! } });
+    send({ GetGameState: { game_uuid: id! } });
   }, []);
 
   useEffect(() => {
@@ -282,7 +283,7 @@ function Arena() {
   // Sends the current state to the server
   useEffect(() => {
     const updateGameStateOnServer = () => {
-      sendMessage(JSON.stringify({ SetGameState: { game_uuid: id, game_state: state } }));
+      send({ SetGameState: { game_uuid: id!, game_state: state } });
     };
     if (state.nmove != null) {
       updateGameStateOnServer();

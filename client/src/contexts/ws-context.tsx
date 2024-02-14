@@ -1,6 +1,7 @@
 import React, { createContext, useEffect, useRef, useState } from "react";
 import useWebSocket, { ReadyState, SendMessage } from "react-use-websocket";
-import { z } from "zod";
+import { TRequest } from "src/types/request";
+import { AvailableGames, GameCreated, GameState, TAvailableGames, TGameCreated, TGameState } from "src/types/response";
 
 const generateUserUUID = (callback: (_: string) => void) => {
   // https://hitchhikers.yext.com/guides/analyze-trends-with-visitor-analytics/07-cookies-visitors/
@@ -45,23 +46,10 @@ const unregisterClient = async (userUUID: string) => {
   }).then((response) => response.json());
 };
 
-//
-
-const AvailableGames = z.object({
-  AvailableGames: z.object({ game_uuids: z.array(z.string()) }),
-});
-const GameCreated = z.object({ GameCreated: z.any() });
-const GameState = z.object({ GameState: z.object({ game_state: z.any() }) });
-
-type TAvailableGames = z.infer<typeof AvailableGames>;
-type TGameCreated = z.infer<typeof GameCreated>;
-type TGameState = z.infer<typeof GameState>;
-
 type WebSocketContextProps = {
+  send: (req: TRequest) => void;
   subscribe: (channel: string, id: string, b: any) => void;
   unsubscribe: (channel: string, id: string) => void;
-  connectionStatus: String;
-  sendMessage: SendMessage;
 };
 
 const WebSocketContext = createContext<WebSocketContextProps | null>(null);
@@ -94,14 +82,11 @@ function WebSocketProvider({ children }: { children: any }) {
     setSocketUrl(`ws://127.0.0.1:8000/ws/${clientUUID}`);
   }, [userUUID, clientUUID]);
 
-  const { sendMessage, lastMessage, readyState } = useWebSocket<string>(socketUrl);
-  const connectionStatus = {
-    [ReadyState.CONNECTING]: "Connecting",
-    [ReadyState.OPEN]: "Open",
-    [ReadyState.CLOSING]: "Closing",
-    [ReadyState.CLOSED]: "Closed",
-    [ReadyState.UNINSTANTIATED]: "Uninstantiated",
-  }[readyState];
+  const { sendMessage, lastMessage } = useWebSocket<string>(socketUrl);
+
+  const send = (req: TRequest) => {
+    sendMessage(JSON.stringify(req));
+  };
 
   const channels = useRef<Map<string, Map<string, any>>>(new Map());
   const subscribe = (channel: string, id: string, callback: (a: any) => void) => {
@@ -153,11 +138,7 @@ function WebSocketProvider({ children }: { children: any }) {
     }
   }, [lastMessage]);
 
-  return (
-    <WebSocketContext.Provider value={{ subscribe, unsubscribe, connectionStatus, sendMessage }}>
-      {children}
-    </WebSocketContext.Provider>
-  );
+  return <WebSocketContext.Provider value={{ subscribe, unsubscribe, send }}>{children}</WebSocketContext.Provider>;
 }
 
-export { WebSocketContext, WebSocketProvider, TAvailableGames, TGameState };
+export { WebSocketContext, WebSocketProvider };

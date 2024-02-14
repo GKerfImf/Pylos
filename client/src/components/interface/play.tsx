@@ -7,14 +7,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "src/components/ui/tabs
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "src/components/ui/table";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "src/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
-import { TAvailableGames, WebSocketContext } from "src/contexts/ws-context";
 import "src/styles.css";
+import { WebSocketContext } from "src/contexts/ws-context";
+import { TAvailableGames } from "src/types/response";
 
 const CreateGameTab: React.FC = () => {
   const [time, setTime] = useState(5);
   const [increment, setIncrement] = useState(0);
 
-  const { sendMessage } = useContext(WebSocketContext)!;
+  const { send } = useContext(WebSocketContext)!;
 
   return (
     <Card>
@@ -63,7 +64,7 @@ const CreateGameTab: React.FC = () => {
         {/*  */}
       </CardContent>
       <CardFooter>
-        <Button onClick={() => sendMessage(JSON.stringify({ CreateGame: {} }))} size="sm">
+        <Button onClick={() => send({ CreateGame: {} })} size="sm">
           Start
         </Button>
       </CardFooter>
@@ -104,7 +105,7 @@ const JoinGameTab: React.FC = () => {
     return null;
   };
 
-  const { sendMessage, subscribe, unsubscribe } = useContext(WebSocketContext)!;
+  const { send, subscribe, unsubscribe } = useContext(WebSocketContext)!;
 
   type TGame = {
     game_uuid: String;
@@ -114,7 +115,7 @@ const JoinGameTab: React.FC = () => {
   };
   const [games, setGames] = useState<TGame[]>([]);
   useEffect(() => {
-    sendMessage(JSON.stringify({ GetAvailableGames: {} }));
+    send({ GetAvailableGames: {} });
   }, []);
 
   useEffect(() => {
@@ -190,12 +191,10 @@ const InviteTab: React.FC = () => {
     { user: "anon101", last: "5 min ago" },
   ];
 
-  const { connectionStatus } = useContext(WebSocketContext)!;
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Invite a player {connectionStatus}</CardTitle>
+        <CardTitle>Invite a player</CardTitle>
         {/* <CardDescription>Change your password here. After saving, you'll be logged out.</CardDescription> */}
       </CardHeader>
       {/* <CardContent className="space-y-2">
