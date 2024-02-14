@@ -3,7 +3,7 @@ import React from "react";
 import { useGLTF } from "@react-three/drei";
 
 export default function Platform() {
-  const { nodes, materials } = useGLTF("./models/pylos.glb");
+  const { nodes, materials } = useGLTF("/models/pylos.glb");
   return (
     <group dispose={null}>
       <mesh castShadow receiveShadow geometry={nodes.Platform.geometry} material={materials.M_plaftorm}></mesh>

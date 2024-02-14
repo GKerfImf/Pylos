@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useReducer } from "react";
 import _ from "lodash";
-import Platform from "src/components/platform";
 import range from "src/util/range";
 import cartesian from "src/util/cart";
 import Ball from "src/types/ball";
@@ -13,6 +12,7 @@ import { Sphere, GhostSphere } from "src/components/spheres";
 import { WebSocketContext } from "src/contexts/ws-context";
 import { useParams } from "react-router-dom";
 import { TGameState } from "src/types/response";
+const Platform = React.lazy(() => import("src/components/platform"));
 
 const initCoordinates = () => {
   const coords = new TypedMap<Index3D, Coord3D>();
