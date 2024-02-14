@@ -57,21 +57,25 @@ pub struct BoardState {
     balls: Vec<Ball>,
 }
 
+type ClientUUID = String;
+
 #[derive(Debug, Clone)]
 pub struct Client {
     pub user_uuid: String,
     pub sender: Option<mpsc::UnboundedSender<std::result::Result<Message, warp::Error>>>,
 }
-type Clients = Arc<Mutex<HashMap<String, Client>>>;
+type Clients = Arc<Mutex<HashMap<ClientUUID, Client>>>;
+
+type GameUUID = String;
 
 #[derive(Debug, Clone)]
 pub struct Game {
-    pub player_white_uuid: Option<String>,
-    pub player_black_uuid: Option<String>,
-    pub watching_client_uuids: Vec<String>,
+    pub watching: Vec<ClientUUID>,  // TODO?: vec -> set
+    pub player_white: Option<ClientUUID>,
+    pub player_black: Option<ClientUUID>,
     pub state: BoardState,
 }
-type Games = Arc<Mutex<HashMap<String, Game>>>;
+type Games = Arc<Mutex<HashMap<GameUUID, Game>>>;
 
 type Result<T> = std::result::Result<T, Rejection>;
 
@@ -81,7 +85,7 @@ type Result<T> = std::result::Result<T, Rejection>;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct RegisterRequest {
-    user_uuid: String,
+    user_uuid: String, // TODO: String -> UserUUID
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
@@ -94,22 +98,25 @@ pub struct RegisterResponse {
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Request {
     CreateGame {},
-    JoinGame {},
+    JoinGame {
+        game_uuid: GameUUID,
+    },
     GetAvailableGames {},
     GetGameState {
-        game_uuid: String,
+        game_uuid: GameUUID,
     },
     SetGameState {
         // TODO: rename [SetBoardState]
-        game_uuid: String,
+        game_uuid: GameUUID,
         game_state: BoardState,
     },
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Response {
-    GameCreated { game_uuid: String },
-    AvailableGames { game_uuids: Vec<String> },
+    GameCreated { game_uuid: GameUUID }, // TODO: change [CreateGame { status: OK/FAIL, game_uuid: GameUUID}]
+    JoinGame { status: u8, game_uuid: GameUUID }, // TODO?: status u8 -> enum
+    AvailableGames { game_uuids: Vec<GameUUID> },
     GameState { game_state: BoardState }, // TODO: rename [BoardState]
 }
 
@@ -162,9 +169,9 @@ fn initialize_board_state() -> BoardState {
 
 fn initialize_game_state() -> Game {
     Game {
-        player_white_uuid: None,
-        player_black_uuid: None,
-        watching_client_uuids: vec![],
+        watching: vec![],
+        player_white: None,
+        player_black: None,
         state: initialize_board_state(),
     }
 }
@@ -192,10 +199,10 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
         // TODO: make it a separate function
         Request::CreateGame {} => {
             let game_uuid: String = Uuid::new_v4().simple().to_string();
-            games.lock().await.insert(
-                game_uuid.clone(),
-                initialize_game_state()
-            );
+            games
+                .lock()
+                .await
+                .insert(game_uuid.clone(), initialize_game_state());
             Response::GameCreated { game_uuid }
         }
         // TODO: make it a separate function
@@ -231,6 +238,8 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
                     return;
                 }
             };
+
+            // TODO: send game state only to [watch] list
             Response::GameState {
                 game_state: game_state,
             }
@@ -243,8 +252,24 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             }
         }
         // TODO: make it a separate function
-        Request::JoinGame {} => {
-            todo!("implement")
+        Request::JoinGame { game_uuid } => {
+            let mut locked = games.lock().await;
+            match locked.get_mut(&game_uuid) {
+                Some(game) => {
+                    game.watching.push(client_uuid.to_string());
+                }
+                None => {
+                    warn!("Game uuid does not exists {}", game_uuid);
+                    return;
+                }
+            };
+            debug!("{:?}", locked.clone());
+
+            // TODO: send game state only to [watch] list
+            Response::JoinGame {
+                status: 200,
+                game_uuid,
+            }
         }
     };
 

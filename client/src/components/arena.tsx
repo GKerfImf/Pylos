@@ -265,6 +265,7 @@ function Arena() {
   const { sendMessage, subscribe, unsubscribe } = useContext(WebSocketContext)!;
 
   useEffect(() => {
+    sendMessage(JSON.stringify({ JoinGame: { game_uuid: id } }));
     sendMessage(JSON.stringify({ GetGameState: { game_uuid: id } }));
   }, []);
 
