@@ -6,12 +6,15 @@ import { WebSocketContext, WebSocketProvider } from "./contexts/ws-context";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Player from "./types/player";
 import { cn } from "./util/cn";
-import { TGameState } from "./types/response";
+import { TGameState, TJoinGame } from "./types/response";
 
 const ActiveGame: React.FC = () => {
   const [currentTurn, setCurrentTurn] = useState(Player.White);
-  const { subscribe, unsubscribe } = useContext(WebSocketContext)!;
+  const { subscribe, unsubscribe, send } = useContext(WebSocketContext)!;
 
+  // TODO: check who is playing white/black
+
+  // Listen to the game state to know whose turn it is
   useEffect(() => {
     subscribe("GameState", "ActiveGame", (req: TGameState) => {
       setCurrentTurn(req.GameState.game_state.turn);
@@ -20,6 +23,23 @@ const ActiveGame: React.FC = () => {
       unsubscribe("GameState", "ActiveGame");
     };
   }, []);
+
+  // Listen to the clients that join the game to display names
+  useEffect(() => {
+    subscribe("JoinGame", "ActiveGame", (req: TJoinGame) => {
+      send({
+        GetClientName: {
+          client_uuid: req.JoinGame.client_uuid,
+        },
+      });
+    });
+    return () => {
+      unsubscribe("JoinGame", "ActiveGame");
+    };
+  }, []);
+
+  // TODO: listen to [ChangeName] to keep track of players' names
+  // TODO: useEffect( () => {} )
 
   return (
     <div className="w-72 h-4/6 p-3 border rounded-xl bg-slate-900 border-slate-900 shadow-lg shadow-black flex-row justify-center items-center overflow-scroll scrollbar-hide">

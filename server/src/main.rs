@@ -58,11 +58,13 @@ pub struct BoardState {
     balls: Vec<Ball>,
 }
 
+type UserUUID = String;
 type ClientUUID = String;
 
 #[derive(Debug, Clone)]
 pub struct Client {
-    pub user_uuid: String,
+    pub user_name: String,
+    pub user_uuid: UserUUID,
     pub sender: Option<mpsc::UnboundedSender<std::result::Result<Message, warp::Error>>>,
 }
 type Clients = Arc<Mutex<HashMap<ClientUUID, Client>>>;
@@ -71,7 +73,7 @@ type GameUUID = String;
 
 #[derive(Debug, Clone)]
 pub struct Game {
-    pub watching: Vec<ClientUUID>,  // TODO?: vec -> set
+    pub watching: Vec<ClientUUID>, // TODO: vec -> set
     pub player_white: Option<ClientUUID>,
     pub player_black: Option<ClientUUID>,
     pub state: BoardState,
@@ -86,7 +88,8 @@ type Result<T> = std::result::Result<T, Rejection>;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct RegisterRequest {
-    user_uuid: String, // TODO: String -> UserUUID
+    user_name: String,
+    user_uuid: UserUUID,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
@@ -98,6 +101,13 @@ pub struct RegisterResponse {
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Request {
+    ChangeName {
+        new_user_name: String,
+    },
+    GetClientName {
+        client_uuid: ClientUUID,
+    },
+
     CreateGame {},
     JoinGame {
         game_uuid: GameUUID,
@@ -115,10 +125,32 @@ pub enum Request {
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Response {
-    GameCreated { game_uuid: GameUUID }, // TODO: change [CreateGame { status: OK/FAIL, game_uuid: GameUUID}]
-    JoinGame { status: u8, game_uuid: GameUUID }, // TODO?: status u8 -> enum
-    AvailableGames { game_uuids: Vec<GameUUID> },
-    GameState { game_state: BoardState }, // TODO: rename [BoardState]
+    ChangeName {
+        status: u8, // TODO?: status u8 -> enum
+        user_name: String,
+        client_uuid: ClientUUID,
+    },
+    ClientName {
+        user_name: String,
+        client_uuid: ClientUUID,
+    },
+
+    CreateGame {
+        status: u8,
+        user_name: String,
+        game_uuid: GameUUID,
+    },
+    JoinGame {
+        status: u8, // TODO?: status u8 -> enum
+        client_uuid: ClientUUID,
+        game_uuid: GameUUID,
+    },
+    AvailableGames {
+        game_uuids: Vec<GameUUID>,
+    },
+    GameState {
+        game_state: BoardState,
+    }, // TODO: rename [BoardState]
 }
 
 // ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
@@ -198,13 +230,56 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
 
     let res: Response = match req {
         // TODO: make it a separate function
+        Request::ChangeName { new_user_name } => {
+            match clients.lock().await.get_mut(client_uuid) {
+                Some(client) => {
+                    client.user_name = new_user_name.clone();
+                }
+                None => {
+                    warn!("Client UUID does not exist, ignore"); // TODO
+                    return;
+                }
+            }
+            Response::ChangeName {
+                status: 200,
+                client_uuid: client_uuid.to_string(),
+                user_name: new_user_name,
+            }
+        }
+
+        // TODO: make it a separate function
+        Request::GetClientName { client_uuid } => {
+            match clients.lock().await.get(&client_uuid) {
+                Some(client) => Response::ClientName {
+                    client_uuid: client_uuid.to_string(),
+                    user_name: client.clone().user_name,
+                },
+                None => {
+                    warn!("Client UUID does not exist, ignore"); // TODO
+                    return;
+                }
+            }
+        }
+
+        // TODO: make it a separate function
         Request::CreateGame {} => {
+            let user_name: String = clients
+                .lock()
+                .await
+                .get(client_uuid)
+                .expect("Client UUID does not exist")
+                .user_name
+                .clone();
             let game_uuid: String = Uuid::new_v4().simple().to_string();
             games
                 .lock()
                 .await
                 .insert(game_uuid.clone(), initialize_game_state());
-            Response::GameCreated { game_uuid }
+            Response::CreateGame {
+                status: 200,
+                user_name,
+                game_uuid,
+            }
         }
         // TODO: make it a separate function
         Request::GetAvailableGames {} => {
@@ -282,12 +357,11 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             // TODO: send game state only to [watch] list
             Response::JoinGame {
                 status: 200,
+                client_uuid: client_uuid.to_string(),
                 game_uuid,
             }
         }
     };
-
-    // debug!("[process_client_msg]: current games {:?}", games);
 
     // TODO: del
     clients.lock().await.iter_mut().for_each(|(_, client)| {
@@ -358,12 +432,14 @@ pub async fn ws_handler(
 pub async fn register_handler(body: RegisterRequest, clients: Clients) -> Result<impl Reply> {
     info!("[register_handler]: {:?} ", body);
 
-    let user_uuid = body.user_uuid;
-    let client_uuid = Uuid::new_v4().simple().to_string();
+    let user_name: String = body.user_name;
+    let user_uuid: UserUUID = body.user_uuid;
+    let client_uuid: ClientUUID = Uuid::new_v4().simple().to_string();
 
     clients.lock().await.insert(
         client_uuid.clone(),
         Client {
+            user_name,
             user_uuid: user_uuid.clone(),
             sender: None,
         },
@@ -390,6 +466,7 @@ fn with_games(games: Games) -> impl Filter<Extract = (Games,), Error = Infallibl
 
 #[tokio::main]
 async fn main() {
+    std::env::set_var("RUST_LOG", "debug");
     env_logger::init();
 
     let clients: Clients = Arc::new(Mutex::new(HashMap::new()));

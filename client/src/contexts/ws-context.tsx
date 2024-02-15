@@ -1,7 +1,19 @@
 import React, { createContext, useEffect, useRef, useState } from "react";
-import useWebSocket, { ReadyState, SendMessage } from "react-use-websocket";
+import useWebSocket from "react-use-websocket";
 import { TRequest } from "src/types/request";
-import { AvailableGames, GameCreated, GameState, TAvailableGames, TGameCreated, TGameState } from "src/types/response";
+import {
+  AvailableGames,
+  CreateGame,
+  GameState,
+  JoinGame,
+  TAvailableGames,
+  TCreateGame,
+  TGameState,
+  TJoinGame,
+} from "src/types/response";
+
+const entryID = "pylos_uuid";
+const entryProfileName = "pylos_profile_name";
 
 const generateUserUUID = (callback: (_: string) => void) => {
   // https://hitchhikers.yext.com/guides/analyze-trends-with-visitor-analytics/07-cookies-visitors/
@@ -15,7 +27,6 @@ const generateUserUUID = (callback: (_: string) => void) => {
     return uuid;
   }
 
-  const entryID = "pylos_uuid";
   if (!localStorage.getItem(entryID)) {
     const newPylosUUID = create_UUID();
     localStorage.setItem(entryID, newPylosUUID);
@@ -24,10 +35,22 @@ const generateUserUUID = (callback: (_: string) => void) => {
   callback(localStorage.getItem(entryID)!);
 };
 
-const registerClient = async (userUUID: string, callback: (_: string) => void) => {
+const generateUserName = (callback: (_: string) => void) => {
+  if (!localStorage.getItem(entryID)) {
+    console.warn("[ws-context]: [pylos_uuid] does not exist");
+  }
+
+  if (!localStorage.getItem(entryProfileName)) {
+    callback(`anon-${localStorage.getItem(entryID)!.slice(0, 8)}`);
+  } else {
+    callback(localStorage.getItem(entryProfileName)!);
+  }
+};
+
+const registerClient = async (userName: String, userUUID: string, callback: (_: string) => void) => {
   const response = await fetch(`http://localhost:8000/clients/`, {
     method: "POST",
-    body: JSON.stringify({ user_uuid: userUUID }),
+    body: JSON.stringify({ user_name: userName, user_uuid: userUUID }),
     credentials: "include",
     headers: {
       "Content-type": "application/json; charset=UTF-8",
@@ -56,8 +79,10 @@ const WebSocketContext = createContext<WebSocketContextProps | null>(null);
 function WebSocketProvider({ children }: { children: any }) {
   // Stored in [localStorage]
   const [userUUID, setUserUUID] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
   useEffect(() => {
     generateUserUUID(setUserUUID);
+    generateUserName(setUserName);
   }, []);
 
   // Generated via server
@@ -66,7 +91,7 @@ function WebSocketProvider({ children }: { children: any }) {
     if (!userUUID) {
       return;
     }
-    registerClient(userUUID, setClientUUID);
+    registerClient(userName, userUUID, setClientUUID);
     return () => {
       unregisterClient(clientUUID);
     };
@@ -90,26 +115,33 @@ function WebSocketProvider({ children }: { children: any }) {
 
   const channels = useRef<Map<string, Map<string, any>>>(new Map());
   const subscribe = (channel: string, id: string, callback: (a: any) => void) => {
-    console.log("[subscribe]", channel, id);
+    console.debug("[subscribe]", channel, id);
     if (!channels.current.has(channel)) {
       channels.current.set(channel, new Map());
     }
     channels.current.get(channel)?.set(id, callback);
-    console.log("[subscribe]", channels.current.get(channel));
+    console.debug("[subscribe]", channels.current.get(channel));
   };
 
   const unsubscribe = (channel: string, id: string) => {
-    console.log("[unsubscribe]", channel, id);
+    console.debug("[unsubscribe]", channel, id);
     if (channels.current.has(channel)) {
       channels.current.get(channel)?.delete(id);
     }
-    console.log("[unsubscribe]", channels.current.get(channel));
+    console.debug("[unsubscribe]", channels.current.get(channel));
   };
 
   useEffect(() => {
     if (lastMessage != null) {
       const untyped_req = JSON.parse(lastMessage.data);
       switch (Object.keys(untyped_req)[0]) {
+        case "JoinGame": {
+          const req = JoinGame.parse(untyped_req) as TJoinGame;
+          if (channels.current.has("JoinGame")) {
+            channels.current.get("JoinGame")!.forEach((f) => f(req));
+          }
+          break;
+        }
         case "AvailableGames": {
           const req = AvailableGames.parse(untyped_req) as TAvailableGames;
           if (channels.current.has("AvailableGames")) {
@@ -117,10 +149,10 @@ function WebSocketProvider({ children }: { children: any }) {
           }
           break;
         }
-        case "GameCreated": {
-          const req = GameCreated.parse(untyped_req) as TGameCreated;
-          if (channels.current.has("GameCreated")) {
-            channels.current.get("GameCreated")!.forEach((f) => f(req));
+        case "CreateGame": {
+          const req = CreateGame.parse(untyped_req) as TCreateGame;
+          if (channels.current.has("CreateGame")) {
+            channels.current.get("CreateGame")!.forEach((f) => f(req));
           }
           break;
         }
@@ -132,7 +164,7 @@ function WebSocketProvider({ children }: { children: any }) {
           break;
         }
         default: {
-          console.warn("Unknown request", lastMessage.data);
+          console.warn("Unknown response", lastMessage.data);
         }
       }
     }
