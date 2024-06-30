@@ -1,6 +1,18 @@
 use futures::{FutureExt, StreamExt};
 use http::{Method, StatusCode};
 use log::{debug, error, info, warn};
+use pylos::{
+    game::{
+        client::{Client, ClientUUID, Clients, UserUUID},
+        game::{initialize_game_state, Games},
+    },
+    protocol::{
+        html::{RegisterRequest, RegisterResponse},
+        request::Request,
+        response::Response,
+        result::Result,
+    },
+};
 use rand::Rng;
 use serde_json::from_str;
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
@@ -12,33 +24,10 @@ use warp::{
     reply::{json, Reply},
     Filter,
 };
-use pylos::{
-    board::board_state::initialize_board_state,
-    game::{
-        client::{Client, ClientUUID, Clients, UserUUID},
-        game::{Game, Games},
-    },
-    protocol::{
-        html::{RegisterRequest, RegisterResponse},
-        request::Request,
-        response::Response,
-        result::Result,
-    },
-};
-
 
 pub async fn health_handler() -> Result<impl Reply> {
     info!("[health_handler]");
     Ok(StatusCode::OK)
-}
-
-fn initialize_game_state() -> Game {
-    Game {
-        watching: vec![],
-        player_white: None,
-        player_black: None,
-        state: initialize_board_state(),
-    }
 }
 
 async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, games: &Games) {

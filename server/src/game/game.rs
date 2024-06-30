@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
 use super::client::ClientUUID;
-use crate::board::board_state::BoardState;
+use crate::board::board_state::{initialize_board_state, BoardState};
 
 pub type GameUUID = String;
 
@@ -14,3 +14,12 @@ pub struct Game {
     pub state: BoardState,
 }
 pub type Games = Arc<Mutex<HashMap<GameUUID, Game>>>;
+
+pub fn initialize_game_state() -> Game {
+    Game {
+        watching: vec![],
+        player_white: None,
+        player_black: None,
+        state: initialize_board_state(),
+    }
+}
