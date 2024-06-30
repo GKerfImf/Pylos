@@ -1,5 +1,5 @@
-use crate::board::{board_side::BoardSide, index::Index};
 use super::{ball::Ball, player_side::PlayerSide};
+use crate::board::{board_side::BoardSide, index::Index};
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct BoardState {

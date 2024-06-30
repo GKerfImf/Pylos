@@ -14,33 +14,13 @@ use warp::{
 };
 use warp::{reject::Rejection, reply::Reply};
 
-use pylos::board::board_state::{BoardState, initialize_board_state};
-
-// ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
-//                                     Game State                                     //
-// ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
-
-type UserUUID = String;
-type ClientUUID = String;
-
-#[derive(Debug, Clone)]
-pub struct Client {
-    pub user_name: String,
-    pub user_uuid: UserUUID,
-    pub sender: Option<mpsc::UnboundedSender<std::result::Result<Message, warp::Error>>>,
-}
-type Clients = Arc<Mutex<HashMap<ClientUUID, Client>>>;
-
-type GameUUID = String;
-
-#[derive(Debug, Clone)]
-pub struct Game {
-    pub watching: Vec<ClientUUID>, // TODO: vec -> set
-    pub player_white: Option<ClientUUID>,
-    pub player_black: Option<ClientUUID>,
-    pub state: BoardState,
-}
-type Games = Arc<Mutex<HashMap<GameUUID, Game>>>;
+use pylos::{
+    board::board_state::{initialize_board_state, BoardState},
+    game::{
+        client::{Client, ClientUUID, Clients, UserUUID},
+        game::{Game, GameUUID, Games},
+    },
+};
 
 type Result<T> = std::result::Result<T, Rejection>;
 
