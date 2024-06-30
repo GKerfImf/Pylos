@@ -126,8 +126,11 @@ function WebSocketProvider({ children }: { children: any }) {
     if (lastMessage != null) {
       const req = Response.parse(JSON.parse(lastMessage.data)) as TResponse;
       const type_req = Object.keys(req)[0];
-      console.log(JSON.parse(lastMessage.data));
-      console.log(type_req);
+      if (type_req == undefined) {
+        console.log("Error parsing", JSON.parse(lastMessage.data));
+      } else {
+        console.log(type_req);
+      }
 
       if (channels.current.has(type_req)) {
         channels.current.get(type_req)!.forEach((f) => f(req));

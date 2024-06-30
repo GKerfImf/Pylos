@@ -3,7 +3,6 @@ use http::{Method, StatusCode};
 use log::{debug, error, info, warn};
 use rand::Rng;
 use serde_json::from_str;
-use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
 use tokio::sync::{mpsc, Mutex};
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -15,48 +14,11 @@ use warp::{
 };
 use warp::{reject::Rejection, reply::Reply};
 
+use pylos::board::board_state::{BoardState, initialize_board_state};
+
 // ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
 //                                     Game State                                     //
 // ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
-
-#[derive(Serialize_repr, Deserialize_repr, Debug, Clone)]
-#[repr(u8)]
-pub enum Side {
-    White = 0,
-    Black = 1,
-}
-
-#[derive(Serialize_repr, Deserialize_repr, Debug, Clone)]
-#[repr(u8)]
-pub enum Board {
-    White = 0,
-    Black = 1,
-    Main = 2,
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
-pub struct Index {
-    b: Board,
-    x: u8,
-    y: u8,
-    z: u8,
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
-pub struct Ball {
-    player: Side,
-    index: Index,
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
-pub struct BoardState {
-    nmove: u8,
-    turn: Side,
-    takeDownRule: u8,                // TODO: rename
-    selectedBall: Option<Ball>,      // TODO: rename
-    selectedGhostBall: Option<Ball>, // TODO: rename
-    balls: Vec<Ball>,
-}
 
 type UserUUID = String;
 type ClientUUID = String;
@@ -158,46 +120,6 @@ pub enum Response {
 pub async fn health_handler() -> Result<impl Reply> {
     info!("[health_handler]");
     Ok(StatusCode::OK)
-}
-
-fn initialize_board_state() -> BoardState {
-    let balls: Vec<Ball> = (0..5)
-        .flat_map(|x| {
-            (0..3)
-                .flat_map(|y| {
-                    vec![
-                        Ball {
-                            player: Side::White,
-                            index: Index {
-                                b: Board::White,
-                                x: x,
-                                y: y,
-                                z: 0,
-                            },
-                        },
-                        Ball {
-                            player: Side::Black,
-                            index: Index {
-                                b: Board::Black,
-                                x: x,
-                                y: y,
-                                z: 0,
-                            },
-                        },
-                    ]
-                })
-                .collect::<Vec<Ball>>()
-        })
-        .collect();
-
-    BoardState {
-        nmove: 1,
-        turn: Side::White,
-        takeDownRule: 0,
-        selectedBall: None,
-        selectedGhostBall: None,
-        balls,
-    }
 }
 
 fn initialize_game_state() -> Game {
