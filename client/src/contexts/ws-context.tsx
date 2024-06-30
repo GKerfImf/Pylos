@@ -1,16 +1,7 @@
 import React, { createContext, useEffect, useRef, useState } from "react";
 import useWebSocket from "react-use-websocket";
 import { TRequest } from "src/types/request";
-import {
-  AvailableGames,
-  CreateGame,
-  GameState,
-  JoinGame,
-  TAvailableGames,
-  TCreateGame,
-  TGameState,
-  TJoinGame,
-} from "src/types/response";
+import { Response, TResponse } from "src/types/response";
 
 const entryID = "pylos_uuid";
 const entryProfileName = "pylos_profile_name";
@@ -133,39 +124,13 @@ function WebSocketProvider({ children }: { children: any }) {
 
   useEffect(() => {
     if (lastMessage != null) {
-      const untyped_req = JSON.parse(lastMessage.data);
-      switch (Object.keys(untyped_req)[0]) {
-        case "JoinGame": {
-          const req = JoinGame.parse(untyped_req) as TJoinGame;
-          if (channels.current.has("JoinGame")) {
-            channels.current.get("JoinGame")!.forEach((f) => f(req));
-          }
-          break;
-        }
-        case "AvailableGames": {
-          const req = AvailableGames.parse(untyped_req) as TAvailableGames;
-          if (channels.current.has("AvailableGames")) {
-            channels.current.get("AvailableGames")!.forEach((f) => f(req));
-          }
-          break;
-        }
-        case "CreateGame": {
-          const req = CreateGame.parse(untyped_req) as TCreateGame;
-          if (channels.current.has("CreateGame")) {
-            channels.current.get("CreateGame")!.forEach((f) => f(req));
-          }
-          break;
-        }
-        case "GameState": {
-          const req = GameState.parse(untyped_req) as TGameState;
-          if (channels.current.has("GameState")) {
-            channels.current.get("GameState")!.forEach((f) => f(req));
-          }
-          break;
-        }
-        default: {
-          console.warn("Unknown response", lastMessage.data);
-        }
+      const req = Response.parse(JSON.parse(lastMessage.data)) as TResponse;
+      const type_req = Object.keys(req)[0];
+      console.log(JSON.parse(lastMessage.data));
+      console.log(type_req);
+
+      if (channels.current.has(type_req)) {
+        channels.current.get(type_req)!.forEach((f) => f(req));
       }
     }
   }, [lastMessage]);
