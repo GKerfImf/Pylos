@@ -9,93 +9,23 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
 use warp::{
     filters::ws::{Message, WebSocket},
-    reply::json,
+    reply::{json, Reply},
     Filter,
 };
-use warp::{reject::Rejection, reply::Reply};
-
 use pylos::{
-    board::board_state::{initialize_board_state, BoardState},
+    board::board_state::initialize_board_state,
     game::{
         client::{Client, ClientUUID, Clients, UserUUID},
-        game::{Game, GameUUID, Games},
+        game::{Game, Games},
+    },
+    protocol::{
+        html::{RegisterRequest, RegisterResponse},
+        request::Request,
+        response::Response,
+        result::Result,
     },
 };
 
-type Result<T> = std::result::Result<T, Rejection>;
-
-// ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
-//                                        HTTP                                        //
-// ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
-
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
-pub struct RegisterRequest {
-    user_name: String,
-    user_uuid: UserUUID,
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
-pub struct RegisterResponse {
-    url: String,
-}
-
-// ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
-
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
-pub enum Request {
-    ChangeName {
-        new_user_name: String,
-    },
-    GetClientName {
-        client_uuid: ClientUUID,
-    },
-
-    CreateGame {},
-    JoinGame {
-        game_uuid: GameUUID,
-    },
-    GetAvailableGames {},
-    GetGameState {
-        game_uuid: GameUUID,
-    },
-    SetGameState {
-        // TODO: rename [SetBoardState]
-        game_uuid: GameUUID,
-        game_state: BoardState,
-    },
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
-pub enum Response {
-    ChangeName {
-        status: u8, // TODO?: status u8 -> enum
-        user_name: String,
-        client_uuid: ClientUUID,
-    },
-    ClientName {
-        user_name: String,
-        client_uuid: ClientUUID,
-    },
-
-    CreateGame {
-        status: u8,
-        user_name: String,
-        game_uuid: GameUUID,
-    },
-    JoinGame {
-        status: u8, // TODO?: status u8 -> enum
-        client_uuid: ClientUUID,
-        game_uuid: GameUUID,
-    },
-    AvailableGames {
-        game_uuids: Vec<GameUUID>,
-    },
-    GameState {
-        game_state: BoardState,
-    }, // TODO: rename [BoardState]
-}
-
-// ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ----  ---- ---- ---- ---- //
 
 pub async fn health_handler() -> Result<impl Reply> {
     info!("[health_handler]");
