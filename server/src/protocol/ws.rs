@@ -92,7 +92,7 @@ async fn create_game(client_uuid: &str, clients: &Clients, games: &Games) -> () 
     });
 }
 
-async fn get_available_games(clients: &Clients, games: &Games) -> () {
+async fn get_available_games(client_uuid: &str, clients: &Clients, games: &Games) -> () {
     let uuids: Vec<String> = games
         .lock()
         .await
@@ -102,12 +102,16 @@ async fn get_available_games(clients: &Clients, games: &Games) -> () {
 
     let res = Response::AvailableGames { game_uuids: uuids };
 
-    // TODO: do not send response to everyone
-    clients.lock().await.iter_mut().for_each(|(_, client)| {
-        if let Some(sender) = &client.sender {
+    clients
+        .lock()
+        .await
+        .get(client_uuid)
+        .expect("Client UUID does not exist")
+        .sender
+        .iter()
+        .for_each(|sender| {
             let _ = sender.send(Ok(Message::text(serde_json::to_string(&res).unwrap())));
-        }
-    });
+        });
 }
 
 async fn join_game(client_uuid: &str, game_uuid: String, clients: &Clients, games: &Games) -> () {
@@ -229,7 +233,7 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
         }
         Request::GetClientName { client_uuid } => get_client_name(client_uuid, clients).await,
         Request::CreateGame {} => create_game(client_uuid, clients, games).await,
-        Request::GetAvailableGames {} => get_available_games(clients, games).await,
+        Request::GetAvailableGames {} => get_available_games(client_uuid, clients, games).await,
         Request::JoinGame { game_uuid } => join_game(client_uuid, game_uuid, clients, games).await,
         Request::GetGameState { game_uuid } => get_game_state(game_uuid, clients, games).await,
         Request::SetGameState {
