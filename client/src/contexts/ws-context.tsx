@@ -2,6 +2,7 @@ import React, { createContext, useEffect, useRef, useState } from "react";
 import useWebSocket from "react-use-websocket";
 import { TRequest } from "src/types/request";
 import { Response, TResponse } from "src/types/response";
+import { toast, useToast } from "src/components/ui/use-toast";
 
 const entryID = "pylos_uuid";
 const entryProfileName = "pylos_profile_name";
@@ -129,6 +130,10 @@ function WebSocketProvider({ children }: { children: any }) {
       if (type_req == undefined) {
         console.log("Error parsing", JSON.parse(lastMessage.data));
       } else {
+        toast({
+          title: type_req,
+          description: lastMessage.data,
+        });
         console.log(type_req);
       }
 

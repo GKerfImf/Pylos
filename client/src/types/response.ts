@@ -3,6 +3,8 @@ import { z } from "zod";
 const JoinGame = z.object({
   JoinGame: z.object({ status: z.number(), client_uuid: z.string(), game_uuid: z.string() }),
 });
+type TJoinGame = z.infer<typeof JoinGame>;
+
 const AvailableGames = z.object({
   AvailableGames: z.object({ game_uuids: z.array(z.string()) }),
 });
@@ -17,4 +19,4 @@ const Response = z.union([AvailableGames, JoinGame, GameState, ClientName, Creat
 type TResponse = z.infer<typeof Response>;
 
 export { Response };
-export { TGameState, TResponse };
+export { TGameState, TResponse, TJoinGame };

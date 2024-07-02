@@ -7,6 +7,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Player from "./types/player";
 import { cn } from "./util/cn";
 import { TGameState, TJoinGame } from "./types/response";
+import { Toaster } from "./components/ui/toaster";
 
 const ActiveGame: React.FC = () => {
   const [currentTurn, setCurrentTurn] = useState(Player.White);
@@ -44,7 +45,6 @@ const ActiveGame: React.FC = () => {
   return (
     <div className="w-72 h-4/6 p-3 border rounded-xl bg-slate-900 border-slate-900 shadow-lg shadow-black flex-row justify-center items-center overflow-scroll scrollbar-hide">
       {/*  */}
-
       <div
         className={cn("flex space-x-4 rounded-md p-2 bg-slate-200 border-2 border-black", {
           "border-cyan-400": currentTurn == Player.White,
@@ -81,6 +81,7 @@ export default function App() {
       element: (
         <div className="absolute inset-0 flex justify-center items-center">
           <Menu />
+          <Toaster />
         </div>
       ),
     },
@@ -93,6 +94,7 @@ export default function App() {
           <div className="absolute right-0 top-0">
             <ActiveGame />
           </div>
+          <Toaster />
         </div>
       ),
     },
