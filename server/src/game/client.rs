@@ -5,6 +5,13 @@ use warp::filters::ws::Message;
 pub type UserUUID = String;
 pub type ClientUUID = String;
 
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
+pub enum ClientRole {
+    PlayerBlack = 0,
+    PlayerWhite = 1,
+    Viewer = 2,
+}
+
 #[derive(Debug, Clone)]
 pub struct Client {
     pub user_name: String,

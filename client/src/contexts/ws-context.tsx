@@ -132,7 +132,7 @@ function WebSocketProvider({ children }: { children: any }) {
       } else {
         toast({
           title: type_req,
-          description: lastMessage.data,
+          description: lastMessage.data.substring(0, 128) + " ...",
         });
         console.log(type_req);
       }

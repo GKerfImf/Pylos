@@ -1,15 +1,9 @@
-use crate::{
-    board::board_state::BoardState,
-    game::{client::ClientUUID, game::GameUUID},
-};
+use crate::{board::board_state::BoardState, game::game::GameUUID};
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Request {
     ChangeName {
         new_user_name: String,
-    },
-    GetClientName {
-        client_uuid: ClientUUID,
     },
 
     CreateGame {
