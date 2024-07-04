@@ -232,7 +232,12 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             change_name(new_user_name, client_uuid, clients).await
         }
         Request::GetClientName { client_uuid } => get_client_name(client_uuid, clients).await,
-        Request::CreateGame {} => create_game(client_uuid, clients, games).await,
+        Request::CreateGame {
+            opponent,
+            side,
+            time,
+            increment,
+        } => create_game(client_uuid, clients, games).await,
         Request::GetAvailableGames {} => get_available_games(client_uuid, clients, games).await,
         Request::JoinGame { game_uuid } => join_game(client_uuid, game_uuid, clients, games).await,
         Request::GetGameState { game_uuid } => get_game_state(game_uuid, clients, games).await,

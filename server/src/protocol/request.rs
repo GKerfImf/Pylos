@@ -12,7 +12,12 @@ pub enum Request {
         client_uuid: ClientUUID,
     },
 
-    CreateGame {},
+    CreateGame {
+        opponent: String, // TODO: proper type
+        side: String,     // TODO: proper type
+        time: u32,
+        increment: u32,
+    },
     JoinGame {
         game_uuid: GameUUID,
     },

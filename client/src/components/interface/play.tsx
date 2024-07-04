@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Label } from "src/components/ui/label";
 import { Slider } from "src/components/ui/slider";
@@ -11,7 +11,62 @@ import "src/styles.css";
 import { WebSocketContext } from "src/contexts/ws-context";
 import { TAvailableGames } from "src/types/response";
 
+const OpponentSelect: React.FC<{ opponent: any; setOpponent: any }> = ({ opponent, setOpponent }) => {
+  return (
+    <div className="flex flex-col space-y-1.5">
+      <Label htmlFor="opponent">Opponent</Label>
+      <Select onValueChange={setOpponent} defaultValue="player" disabled={true}>
+        <SelectTrigger id="opponent">
+          <SelectValue placeholder="Player" />
+        </SelectTrigger>
+        <SelectContent position="popper">
+          <SelectItem value="player">Player</SelectItem>
+          <SelectItem value="computer">Computer</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
+
+const SideSelect: React.FC<{ side: any; setSide: any }> = ({ side, setSide }) => {
+  return (
+    <div className="flex flex-col space-y-1.5">
+      <Label htmlFor="side">Side</Label>
+      <Select onValueChange={setSide} defaultValue="random" disabled={true}>
+        <SelectTrigger id="side">
+          <SelectValue placeholder="Random" />
+        </SelectTrigger>
+        <SelectContent position="popper">
+          <SelectItem value="random">Random</SelectItem>
+          <SelectItem value="white">White</SelectItem>
+          <SelectItem value="black">Black</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
+
+const TimeSelect: React.FC<{ time: any; setTime: any }> = ({ time, setTime }) => {
+  return (
+    <div className="flex flex-col space-y-1.5">
+      <Label htmlFor="time">Time : {time} mins</Label>
+      <Slider onValueChange={(e) => setTime(e[0])} defaultValue={[5]} max={10} min={1} step={1} />
+    </div>
+  );
+};
+
+const Increment: React.FC<{ increment: any; setIncrement: any }> = ({ increment, setIncrement }) => {
+  return (
+    <div className="flex flex-col space-y-1.5">
+      <Label htmlFor="increment">Increment: {increment}</Label>
+      <Slider onValueChange={(e) => setIncrement(e[0])} defaultValue={[0]} max={60} step={1} />
+    </div>
+  );
+};
+
 const CreateGameTab: React.FC = () => {
+  const [opponent, setOpponent] = useState<"player" | "computer">("player");
+  const [side, setSide] = useState<"random" | "white" | "black">("random");
   const [time, setTime] = useState(5);
   const [increment, setIncrement] = useState(0);
 
@@ -21,50 +76,29 @@ const CreateGameTab: React.FC = () => {
     <Card>
       <CardHeader>
         <CardTitle>Create a new game</CardTitle>
-        {/* <CardDescription>Make changes to your account here. Click save when you're done.</CardDescription> */}
       </CardHeader>
+
       <CardContent className="space-y-2">
-        {/* <div className="space-y-1">
-          <Label htmlFor="name">Name</Label>
-          <Input id="name" defaultValue="Pedro Duarte" />
-        </div> */}
-        <div className="flex flex-col space-y-1.5">
-          <Label htmlFor="opponent">Opponent</Label>
-          <Select>
-            <SelectTrigger id="opponent">
-              <SelectValue placeholder="Computer" />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectItem value="computer">Computer</SelectItem>
-              <SelectItem value="player">Player</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col space-y-1.5">
-          <Label htmlFor="side">Side</Label>
-          <Select>
-            <SelectTrigger id="side">
-              <SelectValue placeholder="Random" />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectItem value="random">Random</SelectItem>
-              <SelectItem value="white">White</SelectItem>
-              <SelectItem value="black">Black</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col space-y-1.5">
-          <Label htmlFor="time">Time : {time} mins</Label>
-          <Slider onValueChange={(e) => setTime(e[0])} defaultValue={[5]} max={10} min={1} step={1} />
-        </div>
-        <div className="flex flex-col space-y-1.5">
-          <Label htmlFor="increment">Increment: {increment}</Label>
-          <Slider onValueChange={(e) => setIncrement(e[0])} defaultValue={[0]} max={60} step={1} />
-        </div>
-        {/*  */}
+        <OpponentSelect opponent={opponent} setOpponent={setOpponent} />
+        <SideSelect side={side} setSide={setSide} />
+        <TimeSelect time={time} setTime={setTime} />
+        <Increment increment={increment} setIncrement={setIncrement} />
       </CardContent>
+
       <CardFooter>
-        <Button onClick={() => send({ CreateGame: {} })} size="sm">
+        <Button
+          onClick={() =>
+            send({
+              CreateGame: {
+                opponent: opponent,
+                side: side,
+                time: time,
+                increment: increment,
+              },
+            })
+          }
+          size="sm"
+        >
           Start
         </Button>
       </CardFooter>
