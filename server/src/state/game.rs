@@ -22,7 +22,7 @@ pub struct Game {
 pub type Games = Arc<Mutex<HashMap<GameUUID, Game>>>;
 
 impl Game {
-    pub fn new(client_uuid: ClientUUID, game_description: GameDescription) -> Game {
+    pub fn new(_client_uuid: ClientUUID, game_description: GameDescription) -> Game {
         // TODO: For now, let's assume that we always assign random colors to players
         let mut rng = rand::thread_rng();
         let r: u8 = rng.gen();
@@ -58,6 +58,6 @@ impl Game {
             .map(|name| (name.clone(), ClientRole::Viewer))
             .collect();
 
-        return [pl, wt].concat();
+        [pl, wt].concat()
     }
 }

@@ -2,12 +2,12 @@ use std::time::Duration;
 
 use crate::{
     board::board_state::BoardState,
-    game::{
+    protocol::{request::Request, response::Response, result::Result},
+    state::{
         client::{Client, ClientRole, ClientUUID, Clients},
         game::{Game, Games},
         game_description::{GameDescription, GameUUID, SideSelection, TimeControl},
     },
-    protocol::{request::Request, response::Response, result::Result},
 };
 use futures::{FutureExt, StreamExt};
 use log::{error, info, warn};
@@ -20,7 +20,7 @@ use warp::{
     reply::Reply,
 };
 
-async fn change_name(new_user_name: String, client_uuid: &str, clients: &Clients) -> () {
+async fn change_name(new_user_name: String, client_uuid: &str, clients: &Clients) {
     match clients.lock().await.get_mut(client_uuid) {
         Some(client) => {
             client.user_name = new_user_name.clone();
@@ -51,7 +51,7 @@ async fn create_game(
     client_uuid: &str,
     clients: &Clients,
     games: &Games,
-) -> () {
+) {
     let user_name: String = clients
         .lock()
         .await
@@ -89,7 +89,7 @@ async fn create_game(
     });
 }
 
-async fn get_available_games(client_uuid: &str, clients: &Clients, games: &Games) -> () {
+async fn get_available_games(client_uuid: &str, clients: &Clients, games: &Games) {
     let game_descriptions: Vec<GameDescription> = games
         .lock()
         .await
@@ -111,7 +111,7 @@ async fn get_available_games(client_uuid: &str, clients: &Clients, games: &Games
         });
 }
 
-async fn join_game(client_uuid: &str, game_uuid: String, clients: &Clients, games: &Games) -> () {
+async fn join_game(client_uuid: &str, game_uuid: String, clients: &Clients, games: &Games) {
     let mut locked = games.lock().await;
     let client_role = match locked.get_mut(&game_uuid) {
         Some(game) => {
@@ -156,7 +156,7 @@ async fn join_game(client_uuid: &str, game_uuid: String, clients: &Clients, game
         });
 }
 
-async fn broadcast_participants(game_uuid: GameUUID, clients: &Clients, games: &Games) -> () {
+async fn broadcast_participants(game_uuid: GameUUID, clients: &Clients, games: &Games) {
     let locked = games.lock().await;
     let participants: Vec<(ClientUUID, ClientRole)> = match locked.get(&game_uuid) {
         Some(game) => game.get_participants(),
@@ -189,7 +189,7 @@ async fn broadcast_participants(game_uuid: GameUUID, clients: &Clients, games: &
     });
 }
 
-async fn get_game_state(game_uuid: String, clients: &Clients, games: &Games) -> () {
+async fn get_game_state(game_uuid: String, clients: &Clients, games: &Games) {
     let res = Response::GameState {
         game_state: games.lock().await.get(&game_uuid).unwrap().state.clone(),
     };
@@ -207,7 +207,7 @@ async fn set_game_state(
     game_state: BoardState,
     clients: &Clients,
     games: &Games,
-) -> () {
+) {
     // Validation
     let current_game_state = games.lock().await.get(&game_uuid).unwrap().state.clone();
     if current_game_state.nmove >= game_state.nmove {
@@ -228,9 +228,7 @@ async fn set_game_state(
     };
 
     // TODO: send game state only to [watch] list
-    let res = Response::GameState {
-        game_state: game_state,
-    };
+    let res = Response::GameState { game_state };
 
     // TODO: do not send response to everyone
     clients.lock().await.iter_mut().for_each(|(_, client)| {
@@ -246,7 +244,7 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
 
     // Parse the message string into a `Request` enum.
     let req: Request = match msg.to_str() {
-        Ok(message) => match from_str(&message) {
+        Ok(message) => match from_str(message) {
             Ok(req) => req,
             Err(e) => {
                 warn!("error while parsing message to topics request: {}", e);
@@ -265,8 +263,8 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             change_name(new_user_name, client_uuid, clients).await
         }
         Request::CreateGame {
-            opponent,
-            side,
+            opponent: _,
+            side: _,
             time,
             increment,
         } => create_game(time * 60, increment, client_uuid, clients, games).await,
@@ -290,7 +288,7 @@ async fn client_connection(
     clients: Clients,
     games: Games,
     mut client: Client,
-) -> () {
+) {
     info!("[client_connection]: {}", client_uuid);
     let (client_ws_sender, mut client_ws_rcv) = ws.split();
     let (client_sender, client_rcv) = mpsc::unbounded_channel();

@@ -1,4 +1,4 @@
-use crate::game::client::UserUUID;
+use crate::state::client::UserUUID;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct RegisterRequest {

@@ -1,6 +1,6 @@
 use crate::{
     board::board_state::BoardState,
-    game::{
+    state::{
         client::{ClientRole, ClientUUID},
         game_description::{GameDescription, GameUUID},
     },

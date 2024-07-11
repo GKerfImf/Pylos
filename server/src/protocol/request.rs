@@ -1,4 +1,4 @@
-use crate::{board::board_state::BoardState, game::game_description::GameUUID};
+use crate::{board::board_state::BoardState, state::game_description::GameUUID};
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Request {

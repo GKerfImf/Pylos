@@ -1,6 +1,7 @@
 use super::{ball::Ball, player_side::PlayerSide};
 use crate::board::{board_side::BoardSide, index::Index};
 
+#[allow(non_snake_case)]
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct BoardState {
     pub nmove: u8,
@@ -21,8 +22,8 @@ pub fn initialize_board_state() -> BoardState {
                             player: PlayerSide::White,
                             index: Index {
                                 b: BoardSide::White,
-                                x: x,
-                                y: y,
+                                x,
+                                y,
                                 z: 0,
                             },
                         },
@@ -30,8 +31,8 @@ pub fn initialize_board_state() -> BoardState {
                             player: PlayerSide::Black,
                             index: Index {
                                 b: BoardSide::Black,
-                                x: x,
-                                y: y,
+                                x,
+                                y,
                                 z: 0,
                             },
                         },

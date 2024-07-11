@@ -1,14 +1,14 @@
 use http::{Method, StatusCode};
 use log::info;
 use pylos::{
-    game::{
-        client::{Client, ClientUUID, Clients, UserUUID},
-        game::Games,
-    },
     protocol::{
         html::{RegisterRequest, RegisterResponse},
         result::Result,
         ws::ws_handler,
+    },
+    state::{
+        client::{Client, ClientUUID, Clients, UserUUID},
+        game::Games,
     },
 };
 use std::{collections::HashMap, convert::Infallible, sync::Arc};

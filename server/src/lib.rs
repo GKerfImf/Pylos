@@ -1,3 +1,3 @@
 pub mod board;
-pub mod game;
 pub mod protocol;
+pub mod state;
