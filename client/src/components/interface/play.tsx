@@ -155,11 +155,11 @@ const JoinGameTab: React.FC = () => {
   useEffect(() => {
     subscribe("AvailableGames", "JoinGameTab", (req: TAvailableGames) => {
       setGames(
-        req.AvailableGames.game_uuids.map((game_uuid: any, index: number) => ({
-          game_uuid: game_uuid,
-          user: "?",
-          side: "Random",
-          time: "?",
+        req.AvailableGames.game_descriptions.map((description: any, index: number) => ({
+          game_uuid: description.game_uuid,
+          user: description.creator_name,
+          side: description.side_selection,
+          time: (description.time_control.time.secs / 60).toFixed(0) + "+" + description.time_control.increment.secs,
         }))
       );
     });

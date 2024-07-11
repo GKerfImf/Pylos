@@ -1,8 +1,11 @@
+use std::time::Duration;
+
 use crate::{
     board::board_state::BoardState,
     game::{
         client::{Client, ClientRole, ClientUUID, Clients},
-        game::{initialize_game_state, GameUUID, Games},
+        game::{Game, Games},
+        game_description::{GameDescription, GameUUID, SideSelection, TimeControl},
     },
     protocol::{request::Request, response::Response, result::Result},
 };
@@ -42,7 +45,13 @@ async fn change_name(new_user_name: String, client_uuid: &str, clients: &Clients
     });
 }
 
-async fn create_game(client_uuid: &str, clients: &Clients, games: &Games) -> () {
+async fn create_game(
+    time: u64,
+    increment: u64,
+    client_uuid: &str,
+    clients: &Clients,
+    games: &Games,
+) -> () {
     let user_name: String = clients
         .lock()
         .await
@@ -52,10 +61,19 @@ async fn create_game(client_uuid: &str, clients: &Clients, games: &Games) -> () 
         .clone();
 
     let game_uuid: String = Uuid::new_v4().simple().to_string();
-    games
-        .lock()
-        .await
-        .insert(game_uuid.clone(), initialize_game_state());
+    let game_description = GameDescription {
+        game_uuid: game_uuid.clone(),
+        creator_name: user_name.clone(),
+        side_selection: SideSelection::Random,
+        time_control: TimeControl {
+            time: Duration::from_secs(time),
+            increment: Duration::from_secs(increment),
+        },
+    };
+
+    let game = Game::new(client_uuid.to_string(), game_description);
+
+    games.lock().await.insert(game_uuid.clone(), game);
 
     let res = Response::CreateGame {
         status: 200,
@@ -72,14 +90,14 @@ async fn create_game(client_uuid: &str, clients: &Clients, games: &Games) -> () 
 }
 
 async fn get_available_games(client_uuid: &str, clients: &Clients, games: &Games) -> () {
-    let uuids: Vec<String> = games
+    let game_descriptions: Vec<GameDescription> = games
         .lock()
         .await
         .iter_mut()
-        .map(|(game_uuid, _)| game_uuid.clone())
+        .map(|(_, game)| game.game_description.clone())
         .collect();
 
-    let res = Response::AvailableGames { game_uuids: uuids };
+    let res = Response::AvailableGames { game_descriptions };
 
     clients
         .lock()
@@ -251,12 +269,12 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             side,
             time,
             increment,
-        } => create_game(client_uuid, clients, games).await,
+        } => create_game(time * 60, increment, client_uuid, clients, games).await,
         Request::GetAvailableGames {} => get_available_games(client_uuid, clients, games).await,
         Request::JoinGame { game_uuid } => {
             join_game(client_uuid, game_uuid.clone(), clients, games).await;
-            // TODO: also update participants when someone leaves
             broadcast_participants(game_uuid, clients, games).await
+            // TODO: also update participants when someone leaves
         }
         Request::GetGameState { game_uuid } => get_game_state(game_uuid, clients, games).await,
         Request::SetGameState {

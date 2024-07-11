@@ -2,7 +2,7 @@ use crate::{
     board::board_state::BoardState,
     game::{
         client::{ClientRole, ClientUUID},
-        game::GameUUID,
+        game_description::{GameDescription, GameUUID},
     },
 };
 
@@ -33,7 +33,7 @@ pub enum Response {
     },
 
     AvailableGames {
-        game_uuids: Vec<GameUUID>,
+        game_descriptions: Vec<GameDescription>,
     },
     GameState {
         game_state: BoardState,

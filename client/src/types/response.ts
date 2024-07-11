@@ -15,7 +15,19 @@ const GameParticipants = z.object({
 type TGameParticipants = z.infer<typeof GameParticipants>;
 
 const AvailableGames = z.object({
-  AvailableGames: z.object({ game_uuids: z.array(z.string()) }),
+  AvailableGames: z.object({
+    game_descriptions: z.array(
+      z.object({
+        creator_name: z.string(),
+        game_uuid: z.string(),
+        side_selection: z.string(),
+        time_control: z.object({
+          increment: z.object({ nanos: z.number(), secs: z.number() }),
+          time: z.object({ nanos: z.number(), secs: z.number() }),
+        }),
+      })
+    ),
+  }),
 });
 type TAvailableGames = z.infer<typeof AvailableGames>;
 
