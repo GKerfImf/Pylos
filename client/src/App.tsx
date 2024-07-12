@@ -82,10 +82,8 @@ const ActiveGame: React.FC = () => {
     );
   };
 
-  return (
-    <div className="w-72 h-4/6 p-3 border rounded-xl bg-slate-900 border-slate-900 shadow-lg shadow-black flex-row justify-center items-center overflow-scroll scrollbar-hide">
-      <WhitePlayer />
-      <BlackPlayer />
+  const Viewers = () => {
+    return (
       <div className="space-x-4 rounded-md p-2 mb-1 bg-slate-800 border-2 border-black ">
         {viewers.map((v, key) => {
           return (
@@ -95,8 +93,14 @@ const ActiveGame: React.FC = () => {
           );
         })}
       </div>
+    );
+  };
 
-      {/*  */}
+  return (
+    <div className="w-72 h-4/6 p-3 border rounded-xl bg-slate-900 border-slate-900 shadow-lg shadow-black flex-row justify-center items-center overflow-scroll scrollbar-hide">
+      <WhitePlayer />
+      <BlackPlayer />
+      {viewers.length > 0 ? <Viewers /> : null}
     </div>
   );
 };
