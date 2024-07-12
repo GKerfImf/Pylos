@@ -32,6 +32,7 @@ const AvailableGames = z.object({
 type TAvailableGames = z.infer<typeof AvailableGames>;
 
 const CreateGame = z.object({ CreateGame: z.any() });
+type TCreateGame = z.infer<typeof CreateGame>;
 
 const GameState = z.object({ GameState: z.object({ game_state: z.any() }) });
 type TGameState = z.infer<typeof GameState>;
@@ -41,4 +42,4 @@ const Response = z.union([GameParticipants, AvailableGames, JoinGame, GameState,
 type TResponse = z.infer<typeof Response>;
 
 export { Response };
-export { TGameState, TResponse, TJoinGame, TAvailableGames, TGameParticipants };
+export { TGameState, TResponse, TJoinGame, TAvailableGames, TGameParticipants, TCreateGame };

@@ -9,7 +9,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "src/compon
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import "src/styles.css";
 import { WebSocketContext } from "src/contexts/ws-context";
-import { TAvailableGames } from "src/types/response";
+import { TAvailableGames, TCreateGame } from "src/types/response";
 
 const OpponentSelect: React.FC<{ opponent: any; setOpponent: any }> = ({ opponent, setOpponent }) => {
   return (
@@ -65,12 +65,23 @@ const Increment: React.FC<{ increment: any; setIncrement: any }> = ({ increment,
 };
 
 const CreateGameTab: React.FC = () => {
+  const navigate = useNavigate();
+
   const [opponent, setOpponent] = useState<"player" | "computer">("player");
   const [side, setSide] = useState<"random" | "white" | "black">("random");
   const [time, setTime] = useState(5);
   const [increment, setIncrement] = useState(0);
 
-  const { send } = useContext(WebSocketContext)!;
+  const { subscribe, unsubscribe, send } = useContext(WebSocketContext)!;
+
+  useEffect(() => {
+    subscribe("CreateGame", "CreateGameTab", (req: TCreateGame) => {
+      navigate("/games/" + req.CreateGame.game_uuid);
+    });
+    return () => {
+      unsubscribe("CreateGame", "JoinGameTab");
+    };
+  });
 
   return (
     <Card>
