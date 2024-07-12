@@ -1,7 +1,7 @@
 use crate::{
     board::board_state::BoardState,
     state::{
-        client::{ClientRole, ClientUUID},
+        client::{ClientRole, UserUUID},
         game_description::{GameDescription, GameUUID},
     },
 };
@@ -11,12 +11,12 @@ pub enum Response {
     ChangeName {
         status: u8, // TODO?: status u8 -> enum
         user_name: String,
-        client_uuid: ClientUUID,
+        client_uuid: UserUUID,
     },
 
     JoinGame {
         status: u8, // TODO?: status u8 -> enum
-        client_uuid: ClientUUID,
+        client_uuid: UserUUID,
         client_role: ClientRole,
         game_uuid: GameUUID,
     },

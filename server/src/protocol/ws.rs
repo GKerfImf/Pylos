@@ -4,7 +4,7 @@ use crate::{
     board::board_state::BoardState,
     protocol::{request::Request, response::Response, result::Result},
     state::{
-        client::{Client, ClientRole, ClientUUID, Clients},
+        client::{Client, ClientRole, Clients, UserUUID},
         game::{Game, Games},
         game_description::{GameDescription, GameUUID, SideSelection, TimeControl},
     },
@@ -158,7 +158,7 @@ async fn join_game(client_uuid: &str, game_uuid: String, clients: &Clients, game
 
 async fn broadcast_participants(game_uuid: GameUUID, clients: &Clients, games: &Games) {
     let locked = games.lock().await;
-    let participants: Vec<(ClientUUID, ClientRole)> = match locked.get(&game_uuid) {
+    let participants: Vec<(UserUUID, ClientRole)> = match locked.get(&game_uuid) {
         Some(game) => game.get_participants(),
         None => {
             warn!("Game uuid does not exist: {}", game_uuid);

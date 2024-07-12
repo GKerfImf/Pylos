@@ -7,13 +7,12 @@ use pylos::{
         ws::ws_handler,
     },
     state::{
-        client::{Client, ClientUUID, Clients, UserUUID},
+        client::{Client, Clients, UserUUID},
         game::Games,
     },
 };
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
 use tokio::sync::Mutex;
-use uuid::Uuid;
 use warp::{
     reply::{json, Reply},
     Filter,
@@ -29,10 +28,9 @@ pub async fn register_handler(body: RegisterRequest, clients: Clients) -> Result
 
     let user_name: String = body.user_name;
     let user_uuid: UserUUID = body.user_uuid;
-    let client_uuid: ClientUUID = Uuid::new_v4().simple().to_string();
 
     clients.lock().await.insert(
-        client_uuid.clone(),
+        user_uuid.clone(),
         Client {
             user_name,
             user_uuid: user_uuid.clone(),
@@ -41,7 +39,7 @@ pub async fn register_handler(body: RegisterRequest, clients: Clients) -> Result
     );
 
     Ok(json(&RegisterResponse {
-        url: format!("ws://127.0.0.1:8000/ws/{}", client_uuid),
+        url: format!("ws://127.0.0.1:8000/ws/{}", user_uuid),
     }))
 }
 
@@ -61,7 +59,7 @@ fn with_games(games: Games) -> impl Filter<Extract = (Games,), Error = Infallibl
 
 #[tokio::main]
 async fn main() {
-    std::env::set_var("RUST_LOG", "debug");
+    std::env::set_var("RUST_LOG", "info");
     env_logger::init();
 
     let clients: Clients = Arc::new(Mutex::new(HashMap::new()));

@@ -3,8 +3,8 @@ use tokio::sync::{mpsc, Mutex};
 use warp::filters::ws::Message;
 
 pub type UserUUID = String;
-pub type ClientUUID = String;
 
+// TODO: rename [UserRole]
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub enum ClientRole {
     PlayerBlack = 0,
@@ -18,4 +18,4 @@ pub struct Client {
     pub user_uuid: UserUUID,
     pub sender: Option<mpsc::UnboundedSender<std::result::Result<Message, warp::Error>>>,
 }
-pub type Clients = Arc<Mutex<HashMap<ClientUUID, Client>>>;
+pub type Clients = Arc<Mutex<HashMap<UserUUID, Client>>>;
