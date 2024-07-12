@@ -12,42 +12,50 @@ pub struct BoardState {
     pub balls: Vec<Ball>,
 }
 
-pub fn initialize_board_state() -> BoardState {
-    let balls: Vec<Ball> = (0..5)
-        .flat_map(|x| {
-            (0..3)
-                .flat_map(|y| {
-                    vec![
-                        Ball {
-                            player: PlayerSide::White,
-                            index: Index {
-                                b: BoardSide::White,
-                                x,
-                                y,
-                                z: 0,
+impl BoardState {
+    pub fn new() -> BoardState {
+        let balls: Vec<Ball> = (0..5)
+            .flat_map(|x| {
+                (0..3)
+                    .flat_map(|y| {
+                        vec![
+                            Ball {
+                                player: PlayerSide::White,
+                                index: Index {
+                                    b: BoardSide::White,
+                                    x,
+                                    y,
+                                    z: 0,
+                                },
                             },
-                        },
-                        Ball {
-                            player: PlayerSide::Black,
-                            index: Index {
-                                b: BoardSide::Black,
-                                x,
-                                y,
-                                z: 0,
+                            Ball {
+                                player: PlayerSide::Black,
+                                index: Index {
+                                    b: BoardSide::Black,
+                                    x,
+                                    y,
+                                    z: 0,
+                                },
                             },
-                        },
-                    ]
-                })
-                .collect::<Vec<Ball>>()
-        })
-        .collect();
+                        ]
+                    })
+                    .collect::<Vec<Ball>>()
+            })
+            .collect();
 
-    BoardState {
-        nmove: 1,
-        turn: PlayerSide::White,
-        takeDownRule: 0,
-        selectedBall: None,
-        selectedGhostBall: None,
-        balls,
+        BoardState {
+            nmove: 1,
+            turn: PlayerSide::White,
+            takeDownRule: 0,
+            selectedBall: None,
+            selectedGhostBall: None,
+            balls,
+        }
+    }
+}
+
+impl Default for BoardState {
+    fn default() -> Self {
+        Self::new()
     }
 }

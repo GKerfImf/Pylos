@@ -240,8 +240,6 @@ async fn set_game_state(
 
 // TODO: use proper type for [client_uuid]
 async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, games: &Games) {
-    // info!("[process_client_msg]: {:?} {:?}", client_uuid, msg);
-
     // Parse the message string into a `Request` enum.
     let req: Request = match msg.to_str() {
         Ok(message) => match from_str(message) {
