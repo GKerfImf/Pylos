@@ -6,7 +6,7 @@ use super::{
     client::{ClientRole, UserUUID},
     game_description::{GameDescription, GameUUID},
 };
-use crate::board::board_state::BoardState;
+use crate::logic::board::Board;
 
 #[derive(Debug, Clone)]
 pub struct Game {
@@ -15,7 +15,7 @@ pub struct Game {
     pub player_black: u8,        // TODO : del
     pub watching: Vec<UserUUID>, // TODO: vec -> set
 
-    pub state: BoardState,
+    pub state: Board,
 
     pub game_description: GameDescription,
 }
@@ -35,7 +35,7 @@ impl Game {
             player_black: (r + 1) % 2,
 
             watching: vec![],
-            state: BoardState::new(),
+            state: Board::new(),
             game_description,
         }
     }

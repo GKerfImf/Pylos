@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::{
-    board::{ai::AI, board_state::Move, player_side::PlayerSide},
+    logic::{ai::AI, board::Move, player_side::PlayerSide},
     protocol::{request::Request, response::Response, result::Result},
     state::{
         client::{Client, ClientRole, Clients, UserUUID},

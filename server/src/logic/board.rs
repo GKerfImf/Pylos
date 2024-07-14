@@ -3,7 +3,7 @@ use std::ops::Range;
 use log::{error, warn};
 
 use super::{ball::Ball, player_side::PlayerSide};
-use crate::board::{board_side::BoardSide, index::Index};
+use crate::logic::{board_side::BoardSide, index::Index};
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Copy)]
 pub struct Move {
@@ -13,7 +13,7 @@ pub struct Move {
 
 #[allow(non_snake_case)]
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
-pub struct BoardState {
+pub struct Board {
     pub nmove: u8,
     pub turn: PlayerSide,
     pub takeDownRule: u8,                // TODO: rename
@@ -22,8 +22,8 @@ pub struct BoardState {
     pub balls: Vec<Ball>,
 }
 
-impl BoardState {
-    pub fn new() -> BoardState {
+impl Board {
+    pub fn new() -> Board {
         let balls: Vec<Ball> = (0..5)
             .flat_map(|x| {
                 (0..3)
@@ -53,7 +53,7 @@ impl BoardState {
             })
             .collect();
 
-        BoardState {
+        Board {
             nmove: 1,
             turn: PlayerSide::White,
             takeDownRule: 0,
@@ -64,13 +64,13 @@ impl BoardState {
     }
 }
 
-impl Default for BoardState {
+impl Default for Board {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl BoardState {
+impl Board {
     fn find_parents(index: Index) -> Vec<Index> {
         if index.b != BoardSide::Center {
             return vec![];
@@ -142,9 +142,7 @@ impl BoardState {
     }
 
     fn is_parent(child: Index, parent: Index) -> bool {
-        BoardState::find_parents(child)
-            .into_iter()
-            .any(|p| p == parent)
+        Board::find_parents(child).into_iter().any(|p| p == parent)
     }
 
     fn find_ball(&self, index: Index) -> Option<Ball> {
@@ -168,7 +166,7 @@ impl BoardState {
     }
 
     fn parent_exists(&self, index: Index) -> bool {
-        BoardState::find_parents(index)
+        Board::find_parents(index)
             .into_iter()
             .any(|i| !self.empty_index(i))
     }
@@ -233,11 +231,11 @@ impl BoardState {
                 })
                 .filter(|&index| self.empty_index(index))
                 .filter(|&index| {
-                    BoardState::find_children(index)
+                    Board::find_children(index)
                         .into_iter()
                         .all(|index| !self.empty_index(index))
                 })
-                .filter(|&index| !BoardState::is_parent(ball.index, index))
+                .filter(|&index| !Board::is_parent(ball.index, index))
                 .map(|index| Ball { player, index })
                 .collect()
         }
@@ -286,9 +284,9 @@ impl BoardState {
     }
 
     fn square_is_formed(&self, ball: Ball) -> bool {
-        BoardState::find_parents(ball.index)
+        Board::find_parents(ball.index)
             .into_iter()
-            .map(BoardState::find_children)
+            .map(Board::find_children)
             .any(|is| self.same_color_balls(is, self.get_turn()))
     }
 

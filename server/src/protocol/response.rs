@@ -1,5 +1,5 @@
 use crate::{
-    board::board_state::BoardState,
+    logic::board::Board,
     state::{
         client::{ClientRole, UserUUID},
         game_description::{GameDescription, GameUUID},
@@ -36,6 +36,6 @@ pub enum Response {
         game_descriptions: Vec<GameDescription>,
     },
     GameState {
-        game_state: BoardState,
-    }, // TODO: rename [BoardState]
+        game_state: Board,
+    },
 }
