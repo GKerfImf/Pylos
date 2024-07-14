@@ -14,6 +14,50 @@ import { useParams } from "react-router-dom";
 import { TGameState } from "src/types/response";
 const Platform = React.lazy(() => import("src/components/platform"));
 
+function findParents(index: Index3D): Index3D[] {
+  if (index.b != Board.Main) {
+    return [];
+  }
+  const { b, x, y, z } = index;
+  const parents = [
+    { b: b, x: x, y: y, z: z + 1 },
+    { b: b, x: x - 1, y: y, z: z + 1 },
+    { b: b, x: x, y: y - 1, z: z + 1 },
+    { b: b, x: x - 1, y: y - 1, z: z + 1 },
+  ]
+    .filter((e) => 0 <= e.x && e.x < 3 - z)
+    .filter((e) => 0 <= e.y && e.y < 3 - z)
+    .filter((e) => 0 <= e.z && e.z < 4);
+  return parents;
+}
+
+function findChildren(index: Index3D): Index3D[] {
+  if (index.b != Board.Main) {
+    return [];
+  }
+  const { b, x, y, z } = index;
+  const children = [
+    { b: b, x: x, y: y, z: z - 1 },
+    { b: b, x: x + 1, y: y, z: z - 1 },
+    { b: b, x: x, y: y + 1, z: z - 1 },
+    { b: b, x: x + 1, y: y + 1, z: z - 1 },
+  ]
+    .filter((e) => 0 <= e.x && e.x <= 4 - z)
+    .filter((e) => 0 <= e.y && e.y <= 4 - z)
+    .filter((e) => 0 <= e.z && e.z < 4);
+  return children;
+}
+
+function isParent(child: Index3D, parent: Index3D): boolean {
+  return findParents(child).filter((i) => _.isEqual(i, parent)).length > 0;
+}
+
+function findBall(state: any, index: Index3D): Ball | null {
+  const balls: Ball[] = state.balls;
+  const ball = balls.filter((i) => _.isEqual(i.index, index));
+  return ball.length == 0 ? null : ball[0];
+}
+
 const initCoordinates = () => {
   const coords = new TypedMap<Index3D, Coord3D>();
 
@@ -44,78 +88,8 @@ const initCoordinates = () => {
 };
 const coords: TypedMap<Index3D, Coord3D> = initCoordinates();
 
-function findParents(index: Index3D): Index3D[] {
-  if (index.b != Board.Main) {
-    return [];
-  }
-  const { b, x, y, z } = index;
-  const parents = [
-    { b: b, x: x, y: y, z: z + 1 },
-    { b: b, x: x - 1, y: y, z: z + 1 },
-    { b: b, x: x, y: y - 1, z: z + 1 },
-    { b: b, x: x - 1, y: y - 1, z: z + 1 },
-  ]
-    .filter((e) => 0 <= e.x && e.x < 3 - z)
-    .filter((e) => 0 <= e.y && e.y < 3 - z)
-    .filter((e) => 0 <= e.z && e.z < 4);
-  return parents;
-}
-
-function parentExists(state: any, index: Index3D): boolean {
-  return findParents(index)
-    .map((index: Index3D) => isBall(state, index))
-    .some((b) => b);
-}
-
-function isParent(child: Index3D, parent: Index3D): boolean {
-  return findParents(child).filter((i) => _.isEqual(i, parent)).length > 0;
-}
-
-function findChildren(index: Index3D): Index3D[] {
-  if (index.b != Board.Main) {
-    return [];
-  }
-  const { b, x, y, z } = index;
-  const children = [
-    { b: b, x: x, y: y, z: z - 1 },
-    { b: b, x: x + 1, y: y, z: z - 1 },
-    { b: b, x: x, y: y + 1, z: z - 1 },
-    { b: b, x: x + 1, y: y + 1, z: z - 1 },
-  ]
-    .filter((e) => 0 <= e.x && e.x <= 4 - z)
-    .filter((e) => 0 <= e.y && e.y <= 4 - z)
-    .filter((e) => 0 <= e.z && e.z < 4);
-  return children;
-}
-
-function findBall(state: any, index: Index3D): Ball | null {
-  const balls: Ball[] = state.balls;
-  const ball = balls.filter((i) => _.isEqual(i.index, index));
-  return ball.length == 0 ? null : ball[0];
-}
-
 function isBall(state: any, index: Index3D): boolean {
   return findBall(state, index) == null ? false : true;
-}
-
-function sameColorBalls(state: any, indices: Index3D[], color: Player): boolean {
-  return indices
-    .map((index: Index3D) => findBall(state, index))
-    .map((ball: Ball | null) => (ball == null ? null : ball.player))
-    .every((player: Player | null) => (player == null ? false : player == color));
-}
-
-function takeDownIsPossible(state: any, player: Player): boolean {
-  console.debug("[takeDownPossible]");
-  return state.balls
-    .filter((ball: Ball) => _.isEqual(ball.index.b, Board.Main))
-    .filter((ball: Ball) => _.isEqual(ball.player, player))
-    .some((ball: Ball) => !parentExists(state, ball.index));
-}
-
-function hasBallInReserve(state: any, player: Player): boolean {
-  const board = player == Player.White ? Board.White : Board.Black;
-  return state.balls.some((ball: Ball) => _.isEqual(ball.index.b, board));
 }
 
 function getGhostBalls(state: any, selectedBall: Ball): Ball[] {
@@ -143,15 +117,6 @@ function getGhostBalls(state: any, selectedBall: Ball): Ball[] {
     .filter((index: Index3D) => findChildren(index).every((index: Index3D) => isBall(state, index)))
     .filter((index: Index3D) => !isParent(selectedBall.index, index))
     .map((index: Index3D) => ({ player: selectedBall.player, index: index }));
-}
-
-function moveIsPossible(state: any, player: Player): boolean {
-  if (hasBallInReserve(state, player)) {
-    return true;
-  }
-  return state.balls
-    .filter((ball: Ball) => _.isEqual(ball.player, player))
-    .every((ball: Ball) => getGhostBalls(state, ball).length == 0);
 }
 
 const isClickable = (state: any, ball: Ball) => {
@@ -192,40 +157,13 @@ function ballsReducer(state: any, action: any) {
     const newSelectedGhostBall = null;
     const newBalls: Ball[] = addBall(removeBall(balls, from), to);
 
-    const partialState = {
-      // turn : ...
-      // takeDownRule: ...,
+    return {
+      turn: state.turn,
+      takeDownRule: state.takeDownRule,
       nmove: state.nmove + 1,
       selectedBall: newSelectedBall,
       selectedGhostBall: newSelectedGhostBall,
       balls: newBalls,
-    };
-
-    if (state.takeDownRule > 1 && takeDownIsPossible(partialState, state.turn)) {
-      return {
-        takeDownRule: state.takeDownRule - 1,
-        turn: state.turn,
-        ...partialState,
-      };
-    }
-
-    const squareFormed = findParents(to.index)
-      .map(findChildren)
-      .map((indices: Index3D[]) => sameColorBalls(partialState, indices, to.player))
-      .some((b) => b);
-
-    if (squareFormed && moveIsPossible(partialState, 1 - state.turn)) {
-      return {
-        turn: state.turn,
-        takeDownRule: 2,
-        ...partialState,
-      };
-    }
-
-    return {
-      turn: moveIsPossible(partialState, 1 - state.turn) ? 1 - state.turn : state.turn,
-      takeDownRule: 0,
-      ...partialState,
     };
   }
 
@@ -274,21 +212,10 @@ function Arena() {
     subscribe("GameState", "Arena", (req: TGameState) => {
       dispatch({ type: "SetGameState", new_state: req.GameState.game_state });
     });
-
     return () => {
       unsubscribe("GameState", "Arena");
     };
   }, []);
-
-  // Sends the current state to the server
-  useEffect(() => {
-    const updateGameStateOnServer = () => {
-      send({ SetGameState: { game_uuid: id!, game_state: state } });
-    };
-    if (state.nmove != null) {
-      updateGameStateOnServer();
-    }
-  }, [state]);
 
   return (
     <group>
@@ -327,6 +254,7 @@ function Arena() {
                 onClick={(e: any) => {
                   e.stopPropagation();
                   dispatch({ type: "SelectGhostBall", ball: ball });
+                  send({ MakeMove: { game_uuid: id!, mv: { from: state.selectedBall, to: ball } } });
                 }}
               />
             );

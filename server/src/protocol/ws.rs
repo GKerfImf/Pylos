@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::{
-    board::board_state::BoardState,
+    board::board_state::Move,
     protocol::{request::Request, response::Response, result::Result},
     state::{
         client::{Client, ClientRole, Clients, UserUUID},
@@ -202,33 +202,20 @@ async fn get_game_state(game_uuid: String, clients: &Clients, games: &Games) {
     });
 }
 
-async fn set_game_state(
-    game_uuid: String,
-    game_state: BoardState,
-    clients: &Clients,
-    games: &Games,
-) {
-    // Validation
-    let current_game_state = games.lock().await.get(&game_uuid).unwrap().state.clone();
-    if current_game_state.nmove >= game_state.nmove {
-        warn!("Received a bad update, reject"); // TODO
-        return;
-    }
-
-    // Update
+async fn make_move(mv: Move, game_uuid: String, clients: &Clients, games: &Games) {
     let mut locked = games.lock().await;
-    match locked.get_mut(&game_uuid) {
+    let res: Response = match locked.get_mut(&game_uuid) {
         Some(game) => {
-            game.state = game_state.clone();
+            game.state.make_move(mv);
+            Response::GameState {
+                game_state: game.state.clone(),
+            }
         }
         None => {
             warn!("Game uuid does not exists {}", game_uuid);
             return;
         }
     };
-
-    // TODO: send game state only to [watch] list
-    let res = Response::GameState { game_state };
 
     // TODO: do not send response to everyone
     clients.lock().await.iter_mut().for_each(|(_, client)| {
@@ -273,10 +260,7 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             // TODO: also update participants when someone leaves
         }
         Request::GetGameState { game_uuid } => get_game_state(game_uuid, clients, games).await,
-        Request::SetGameState {
-            game_uuid,
-            game_state,
-        } => set_game_state(game_uuid, game_state, clients, games).await,
+        Request::MakeMove { game_uuid, mv } => make_move(mv, game_uuid, clients, games).await,
     };
 }
 

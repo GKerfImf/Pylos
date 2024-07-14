@@ -1,3 +1,5 @@
+import Ball from "src/types/ball";
+
 type TRequest =
   | {
       ChangeName: {
@@ -13,6 +15,6 @@ type TRequest =
   | { JoinGame: { game_uuid: string } }
   | { GetAvailableGames: {} }
   | { GetGameState: { game_uuid: string } }
-  | { SetGameState: { game_uuid: string; game_state: any } };
+  | { MakeMove: { game_uuid: string; mv: { from: Ball; to: Ball } } };
 
 export { TRequest };
