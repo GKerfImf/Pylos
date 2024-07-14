@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::{
-    board::board_state::Move,
+    board::{ai::AI, board_state::Move, player_side::PlayerSide},
     protocol::{request::Request, response::Response, result::Result},
     state::{
         client::{Client, ClientRole, Clients, UserUUID},
@@ -225,6 +225,34 @@ async fn make_move(mv: Move, game_uuid: String, clients: &Clients, games: &Games
     });
 }
 
+async fn make_ai_move(game_uuid: String, clients: &Clients, games: &Games) {
+    let mut locked = games.lock().await;
+
+    let res: Response = match locked.get_mut(&game_uuid) {
+        Some(game) => {
+            let mut ai = AI {
+                side: PlayerSide::Black,
+                board: game.state.clone(),
+            };
+            game.state = ai.make_random_moves();
+            Response::GameState {
+                game_state: game.state.clone(),
+            }
+        }
+        None => {
+            warn!("Game uuid does not exists {}", game_uuid);
+            return;
+        }
+    };
+
+    // TODO: do not send response to everyone
+    clients.lock().await.iter_mut().for_each(|(_, client)| {
+        if let Some(sender) = &client.sender {
+            let _ = sender.send(Ok(Message::text(serde_json::to_string(&res).unwrap())));
+        }
+    });
+}
+
 // TODO: use proper type for [client_uuid]
 async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, games: &Games) {
     // Parse the message string into a `Request` enum.
@@ -260,7 +288,10 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             // TODO: also update participants when someone leaves
         }
         Request::GetGameState { game_uuid } => get_game_state(game_uuid, clients, games).await,
-        Request::MakeMove { game_uuid, mv } => make_move(mv, game_uuid, clients, games).await,
+        Request::MakeMove { game_uuid, mv } => {
+            make_move(mv, game_uuid.clone(), clients, games).await;
+            make_ai_move(game_uuid, clients, games).await;
+        }
     };
 }
 

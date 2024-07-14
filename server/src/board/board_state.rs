@@ -254,9 +254,7 @@ impl BoardState {
             .filter(|ball| ball.index.b == BoardSide::Center)
             .filter(|ball| ball.player == player)
             .filter(|ball| !self.parent_exists(ball.index))
-            .any(|ball| {
-                !self.get_ghost_balls(ball).is_empty()
-            })
+            .any(|ball| !self.get_ghost_balls(ball).is_empty())
     }
 
     fn player_color_matches_ball_color(&self, mv: Move) -> bool {
@@ -397,6 +395,16 @@ impl BoardState {
     }
 
     pub fn get_valid_moves(&self) -> Vec<Move> {
-        vec![]
+        self.balls
+            .clone()
+            .into_iter()
+            .filter(|ball| ball.player == self.get_turn())
+            .filter(|ball| !self.parent_exists(ball.index))
+            .flat_map(|from| {
+                self.get_ghost_balls(from)
+                    .into_iter()
+                    .map(move |to| Move { from, to })
+            })
+            .collect()
     }
 }
