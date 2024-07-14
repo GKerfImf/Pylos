@@ -130,10 +130,10 @@ function WebSocketProvider({ children }: { children: any }) {
       if (type_req == undefined) {
         console.log("Error parsing", JSON.parse(lastMessage.data));
       } else {
-        toast({
-          title: type_req,
-          description: lastMessage.data.substring(0, 128) + " ...",
-        });
+        // toast({
+        //   title: type_req,
+        //   description: lastMessage.data.substring(0, 128) + " ...",
+        // });
         console.log(type_req);
       }
 
