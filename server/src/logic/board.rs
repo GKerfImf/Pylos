@@ -28,9 +28,7 @@ impl fmt::Display for Move {
 pub struct Board {
     pub nmove: u8,
     pub turn: PlayerSide,
-    pub takeDownRule: u8,                // TODO: rename
-    pub selectedBall: Option<Ball>,      // TODO?: delete
-    pub selectedGhostBall: Option<Ball>, // TODO?: delete
+    pub takeDownRule: u8, // TODO: rename
     pub balls: Vec<Ball>,
     pub winner: Option<PlayerSide>,
 }
@@ -70,8 +68,6 @@ impl Board {
             nmove: 1,
             turn: PlayerSide::White,
             takeDownRule: 0,
-            selectedBall: None,
-            selectedGhostBall: None,
             balls,
             winner: None,
         }
