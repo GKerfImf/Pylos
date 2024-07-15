@@ -1,6 +1,5 @@
+use std::fmt;
 use std::ops::Range;
-
-use log::{error, warn};
 
 use super::{ball::Ball, player_side::PlayerSide};
 use crate::logic::{board_side::BoardSide, index::Index};
@@ -9,6 +8,19 @@ use crate::logic::{board_side::BoardSide, index::Index};
 pub struct Move {
     from: Ball,
     to: Ball,
+}
+
+impl fmt::Display for Move {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.from.player {
+            PlayerSide::White => {
+                write!(f, "[◯ : {} => {}]", self.from.index, self.to.index)
+            }
+            PlayerSide::Black => {
+                write!(f, "[● : {} => {}]", self.from.index, self.to.index)
+            }
+        }
+    }
 }
 
 #[allow(non_snake_case)]
@@ -20,6 +32,7 @@ pub struct Board {
     pub selectedBall: Option<Ball>,      // TODO?: delete
     pub selectedGhostBall: Option<Ball>, // TODO?: delete
     pub balls: Vec<Ball>,
+    pub winner: Option<PlayerSide>,
 }
 
 impl Board {
@@ -60,6 +73,7 @@ impl Board {
             selectedBall: None,
             selectedGhostBall: None,
             balls,
+            winner: None,
         }
     }
 }
@@ -67,6 +81,44 @@ impl Board {
 impl Default for Board {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl fmt::Display for Board {
+    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
+        writeln!(f).ok();
+        for y in 0..4 {
+            for z in 0..(4 - y) {
+                write!(f, "[ ").ok();
+                for x in 0..(4 - z) {
+                    match self.find_ball(Index {
+                        b: BoardSide::Center,
+                        x,
+                        y,
+                        z,
+                    }) {
+                        Some(Ball {
+                            player: PlayerSide::White,
+                            index: _,
+                        }) => {
+                            write!(f, "◯ ").unwrap();
+                        }
+                        Some(Ball {
+                            player: PlayerSide::Black,
+                            index: _,
+                        }) => {
+                            write!(f, "● ").unwrap();
+                        }
+                        None => {
+                            write!(f, "⋅ ").ok();
+                        }
+                    }
+                }
+                write!(f, "]  ").ok();
+            }
+            writeln!(f).ok();
+        }
+        write!(f, "")
     }
 }
 
@@ -180,7 +232,7 @@ impl Board {
             .any(|ball| !self.parent_exists(ball.index))
     }
 
-    fn has_ball_in_reserve(&self, player: PlayerSide) -> bool {
+    pub fn number_of_balls_in_reserve(&self, player: PlayerSide) -> usize {
         let players_board_side = if player == PlayerSide::White {
             BoardSide::White
         } else {
@@ -190,7 +242,13 @@ impl Board {
         self.balls
             .clone()
             .into_iter()
-            .any(|ball| ball.index.b == players_board_side)
+            .filter(|ball| ball.index.b == players_board_side)
+            .collect::<Vec<_>>()
+            .len()
+    }
+
+    fn has_ball_in_reserve(&self, player: PlayerSide) -> bool {
+        self.number_of_balls_in_reserve(player) > 0
     }
 
     fn get_ghost_balls(&self, ball: Ball) -> Vec<Ball> {
@@ -346,14 +404,25 @@ impl Board {
         true
     }
 
+    pub fn get_winner(&self) -> Option<PlayerSide> {
+        self.winner
+    }
+
     pub fn get_turn(&self) -> PlayerSide {
         self.turn
     }
 
+    pub fn is_game_over(&self) -> bool {
+        self.get_winner().is_some()
+    }
+
     pub fn make_move(&mut self, mv: Move) -> bool {
         if !self.player_color_matches_ball_color(mv) {
-            warn!("Player is trying to move a ball of the opposite color");
-            return false;
+            panic!("Player is trying to move a ball of the opposite color")
+        }
+
+        if mv.to.index.z == 3 {
+            self.winner = Some(mv.to.player);
         }
 
         if !self.take_back_rule() {
@@ -387,22 +456,49 @@ impl Board {
 
             true
         } else {
-            error!("This branch is supposed to be unreachable!");
-            false
+            panic!("This branch is supposed to be unreachable!")
         }
     }
 
     pub fn get_valid_moves(&self) -> Vec<Move> {
-        self.balls
+        // TODO: separate function
+        let board_side = if self.get_turn() == PlayerSide::White {
+            BoardSide::White
+        } else {
+            BoardSide::Black
+        };
+
+        let to_res: Vec<Move> = self
+            .balls
+            .clone()
+            .into_iter()
+            .find(|ball| ball.index.b == board_side)
+            .into_iter()
+            .flat_map(|from| {
+                self.get_ghost_balls(from)
+                    .into_iter()
+                    .map(move |to| Move { from, to })
+            })
+            .collect();
+
+        let from_res: Vec<Move> = self
+            .balls
             .clone()
             .into_iter()
             .filter(|ball| ball.player == self.get_turn())
+            .filter(|ball| ball.index.b == BoardSide::Center)
             .filter(|ball| !self.parent_exists(ball.index))
             .flat_map(|from| {
                 self.get_ghost_balls(from)
                     .into_iter()
                     .map(move |to| Move { from, to })
             })
-            .collect()
+            .collect();
+
+        if self.take_back_rule() {
+            from_res
+        } else {
+            [to_res, from_res].concat()
+        }
     }
 }

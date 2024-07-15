@@ -1,4 +1,4 @@
-use rand::Rng;
+// use rand::Rng;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
@@ -23,8 +23,8 @@ pub type Games = Arc<Mutex<HashMap<GameUUID, Game>>>;
 
 impl Game {
     pub fn new(_client_uuid: UserUUID, game_description: GameDescription) -> Game {
-        // TODO: For now, let's assume that we always assign random colors to players
-        let mut rng = rand::thread_rng();
+        // TODO: For now, let's assume that we always assign white to the creator of a room
+        // let mut rng = rand::thread_rng();
 
         // let r: u8 = rng.gen();
         let r = 1;

@@ -234,7 +234,8 @@ async fn make_ai_move(game_uuid: String, clients: &Clients, games: &Games) {
                 side: PlayerSide::Black,
                 board: game.state.clone(),
             };
-            game.state = ai.make_random_moves();
+            game.state = ai.minmax_moves();
+
             Response::GameState {
                 game_state: game.state.clone(),
             }
