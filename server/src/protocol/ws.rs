@@ -206,7 +206,7 @@ async fn make_move(mv: Move, game_uuid: String, clients: &Clients, games: &Games
     let mut locked = games.lock().await;
     let res: Response = match locked.get_mut(&game_uuid) {
         Some(game) => {
-            game.state.make_move(mv);
+            let _ = game.state.make_move(mv);
             Response::GameState {
                 game_state: game.state.clone(),
             }

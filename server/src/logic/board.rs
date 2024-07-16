@@ -23,6 +23,71 @@ impl fmt::Display for Move {
     }
 }
 
+#[rustfmt::skip]
+impl Move {
+
+    pub fn new(player: PlayerSide, index_from: Index, index_to: Index) -> Self {
+        Move {
+            from: Ball { player, index: index_from },
+            to: Ball { player, index: index_to, },
+        }
+    }
+
+    // wrc = White from Reserve to Center
+    pub fn new_wrc((a, b): (i8, i8), (x, y, z): (i8, i8, i8)) -> Self {
+        Move::new(
+            PlayerSide::White,
+            Index { b: BoardSide::White, x: a, y: b, z: 0 },
+            Index { b: BoardSide::Center, x, y, z },
+        )
+    }
+
+    // wcr = White from Center to Reserve
+    pub fn new_wcr((x, y, z): (i8, i8, i8), (a, b): (i8, i8)) -> Self {
+        Move::new(
+            PlayerSide::White,
+            Index { b: BoardSide::Center, x, y, z },
+            Index { b: BoardSide::White, x: a, y: b, z: 0 },
+        )
+    }
+
+    // wcc = White from Center to Center
+    pub fn new_wcc((a, b,c ): (i8, i8, i8), (x, y, z): (i8, i8, i8)) -> Self {
+        Move::new(
+            PlayerSide::White,
+            Index { b: BoardSide::Center, x: a, y: b, z: c },
+            Index { b: BoardSide::Center, x, y, z },
+        )
+    }
+
+    // brc = Black from Reserve to Center
+    pub fn new_brc((a, b): (i8, i8), (x, y, z): (i8, i8, i8)) -> Self {
+        Move::new(
+            PlayerSide::Black,
+            Index { b: BoardSide::Black, x: a, y: b, z: 0 },
+            Index { b: BoardSide::Center, x, y, z },
+        )
+    }
+
+    // bcr = Black from Center to Reserve
+    pub fn new_bcr((x, y, z): (i8, i8, i8), (a, b): (i8, i8)) -> Self {
+        Move::new(
+            PlayerSide::Black,
+            Index { b: BoardSide::Center, x, y, z },
+            Index { b: BoardSide::Black, x: a, y: b, z: 0 },
+        )
+    }
+
+    // bcc = Black from Center to Center
+    pub fn new_bcc((a, b,c ): (i8, i8, i8), (x, y, z): (i8, i8, i8)) -> Self {
+        Move::new(
+            PlayerSide::Black,
+            Index { b: BoardSide::Center, x: a, y: b, z: c },
+            Index { b: BoardSide::Center, x, y, z },
+        )
+    }
+}
+
 #[allow(non_snake_case)]
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct Board {
@@ -40,6 +105,7 @@ impl Board {
                 (0..3)
                     .flat_map(|y| {
                         vec![
+                            // TODO: use Ball::new()
                             Ball {
                                 player: PlayerSide::White,
                                 index: Index {
@@ -119,6 +185,7 @@ impl fmt::Display for Board {
 }
 
 impl Board {
+    // TODO?: swap parents and children terminology
     fn find_parents(index: Index) -> Vec<Index> {
         if index.b != BoardSide::Center {
             return vec![];
@@ -214,6 +281,12 @@ impl Board {
         Board::find_parents(index)
             .into_iter()
             .any(|i| !self.empty_index(i))
+    }
+
+    fn all_children_exist(&self, index: Index) -> bool {
+        Board::find_children(index)
+            .into_iter()
+            .all(|i| !self.empty_index(i))
     }
 
     fn take_back_is_possible(&self, player: PlayerSide) -> bool {
@@ -338,17 +411,12 @@ impl Board {
             .any(|is| self.same_color_balls(is, self.get_turn()))
     }
 
-    fn remove_ball(&mut self, ball: Ball) -> bool {
+    fn remove_ball(&mut self, ball: Ball) -> Result<(), &'static str> {
         if self.ball_exists(ball) {
-            self.balls = self
-                .balls
-                .clone()
-                .into_iter()
-                .filter(|b| *b != ball)
-                .collect();
-            true
+            self.balls.retain(|&b| b != ball);
+            Ok(())
         } else {
-            false
+            Err("[remove_ball]: ball does not exist")
         }
     }
 
@@ -406,10 +474,32 @@ impl Board {
         self.get_winner().is_some()
     }
 
-    pub fn make_move(&mut self, mv: Move) -> bool {
+    fn validate_move(&mut self, mv: Move) -> Result<(), &'static str> {
         if !self.player_color_matches_ball_color(mv) {
-            panic!("Player is trying to move a ball of the opposite color")
+            return Err("Player is trying to move a ball of the opposite color");
         }
+
+        if self.is_game_over() {
+            return Err("The game is over");
+        }
+
+        if !self.ball_exists(mv.from) {
+            return Err("The ball does not exist");
+        }
+
+        if !self.all_children_exist(mv.to.index) {
+            return Err("Not all children exist");
+        }
+
+        if !self.empty_index(mv.to.index) {
+            return Err("The ball already exists");
+        }
+
+        Ok(())
+    }
+
+    pub fn make_move(&mut self, mv: Move) -> Result<(), &'static str> {
+        self.validate_move(mv)?;
 
         if mv.to.index.z == 3 {
             self.winner = Some(mv.to.player);
@@ -418,8 +508,8 @@ impl Board {
         if !self.take_back_rule() {
             let Move { from, to } = mv;
 
-            self.increase_move_number();
-            self.remove_ball(from);
+            self.increase_move_number(); // TODO: State change happens here.
+            let _ = self.remove_ball(from); // TODO: If (e.g.) this change is rejected, the state will be inconsistent.
             self.add_ball(to);
 
             if self.square_is_formed(to) {
@@ -428,15 +518,15 @@ impl Board {
                 self.pass_turn();
             }
 
-            true
+            Ok(())
         } else if self.take_back_rule() && self.move_from_main_board_to_side_board(mv) {
             let Move { from, to } = mv;
-            self.remove_ball(from);
+            let _ = self.remove_ball(from);
             self.add_ball(to);
 
             self.decrease_take_back_counter();
             if self.take_back_rule() && self.take_back_is_possible(self.get_turn()) {
-                return true;
+                return Ok(());
             }
 
             self.reset_take_back_counter();
@@ -444,7 +534,7 @@ impl Board {
                 self.pass_turn();
             }
 
-            true
+            Ok(())
         } else {
             panic!("This branch is supposed to be unreachable!")
         }
@@ -488,5 +578,152 @@ impl Board {
         } else {
             [to_res, from_res].concat()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn two_balls_same_place() {
+        let mut board = Board::new();
+        assert!(board.make_move(Move::new_wrc((0, 0), (0, 0, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((0, 0), (0, 0, 0))).is_err());
+    }
+
+    #[test]
+    fn no_children_move() {
+        let mut board = Board::new();
+        assert!(board.make_move(Move::new_wrc((0, 0), (0, 0, 3))).is_err());
+    }
+
+    #[test]
+    fn no_wrong_color_move() {
+        let mut board = Board::new();
+        assert!(board.make_move(Move::new_wrc((0, 0), (0, 1, 0))).is_ok());
+        assert!(board.make_move(Move::new_wrc((1, 1), (1, 0, 0))).is_err());
+    }
+
+    #[test]
+    fn square_formed() {
+        let mut board = Board::new();
+
+        assert!(board.make_move(Move::new_wrc((0, 0), (0, 0, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((0, 0), (3, 3, 0))).is_ok());
+        assert!(board.make_move(Move::new_wrc((1, 0), (0, 1, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((1, 0), (3, 2, 0))).is_ok());
+        assert!(board.make_move(Move::new_wrc((2, 0), (1, 0, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((2, 0), (2, 3, 0))).is_ok());
+        assert!(!board.take_back_rule());
+
+        assert!(board.make_move(Move::new_wrc((3, 0), (1, 1, 0))).is_ok());
+        assert!(board.square_is_formed(Ball::new_wc(1, 1, 0)));
+        assert!(board.take_back_rule());
+    }
+
+    #[test]
+    fn skip_take_back() {
+        let mut board = Board::new();
+
+        assert!(board.make_move(Move::new_wrc((0, 0), (0, 2, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((0, 0), (1, 2, 0))).is_ok());
+
+        assert!(board.make_move(Move::new_wrc((1, 0), (1, 0, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((1, 0), (1, 1, 0))).is_ok());
+
+        assert!(board.make_move(Move::new_wrc((2, 0), (2, 0, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((2, 0), (2, 1, 0))).is_ok());
+
+        assert!(board.make_move(Move::new_wrc((3, 0), (1, 0, 1))).is_ok());
+        assert!(board.make_move(Move::new_brc((3, 0), (0, 1, 0))).is_ok());
+
+        assert!(board.make_move(Move::new_wrc((4, 0), (0, 1, 1))).is_ok());
+        assert!(board.make_move(Move::new_brc((4, 0), (2, 2, 0))).is_ok());
+
+        // [ ⋅ ◯ ◯ ⋅ ]  [ ⋅ ◯ ⋅ ]  [ ⋅ ⋅ ]  [ ⋅ ]
+        // [ ● ● ● ⋅ ]  [ ◯ ⋅ ⋅ ]  [ ⋅ ⋅ ]
+        // [ ◯ ● ● ⋅ ]  [ ⋅ ⋅ ⋅ ]
+        // [ ⋅ ⋅ ⋅ ⋅ ]
+
+        assert!(board.square_is_formed(Ball::new_bc(2, 2, 0)));
+        assert!(board.take_back_rule());
+        assert!(board.take_back_is_possible(PlayerSide::Black));
+        assert_eq!(board.takeDownRule, 2);
+
+        assert!(board.make_move(Move::new_bcr((2, 2, 0), (4, 0))).is_ok());
+
+        // [ ⋅ ◯ ◯ ⋅ ]  [ ⋅ ◯ ⋅ ]  [ ⋅ ⋅ ]  [ ⋅ ]
+        // [ ● ● ● ⋅ ]  [ ◯ ⋅ ⋅ ]  [ ⋅ ⋅ ]
+        // [ ◯ ● ⋅ ⋅ ]  [ ⋅ ⋅ ⋅ ]
+        // [ ⋅ ⋅ ⋅ ⋅ ]
+
+        assert!(!board.take_back_rule());
+        assert!(!board.take_back_is_possible(PlayerSide::Black));
+        assert_eq!(board.takeDownRule, 0);
+    }
+
+    #[test]
+    fn skip_moves() {
+        let mut board = Board::new();
+
+        assert!(board.make_move(Move::new_wrc((0, 0), (2, 2, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((0, 0), (1, 1, 0))).is_ok());
+        assert!(board.make_move(Move::new_wrc((1, 0), (2, 1, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((1, 0), (0, 2, 0))).is_ok());
+        assert!(board.make_move(Move::new_wrc((2, 0), (0, 1, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((2, 0), (1, 2, 0))).is_ok());
+
+        assert!(board.make_move(Move::new_wcc((0, 1, 0), (1, 1, 1))).is_ok());
+        assert!(!board.ball_exists(Ball::new_wc(0, 1, 0)));
+
+        assert!(board.make_move(Move::new_brc((3, 0), (1, 3, 0))).is_ok());
+        assert!(board.make_move(Move::new_wrc((3, 0), (0, 1, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((4, 0), (2, 3, 0))).is_ok());
+        assert!(board.make_move(Move::new_wcc((0, 1, 0), (1, 2, 1))).is_ok());
+        assert!(board.make_move(Move::new_brc((0, 1), (3, 3, 0))).is_ok());
+        assert!(board.make_move(Move::new_wrc((4, 0), (0, 3, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((1, 1), (0, 2, 1))).is_ok());
+        assert!(board.make_move(Move::new_wrc((0, 1), (0, 1, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((2, 1), (0, 0, 0))).is_ok());
+        assert!(board.make_move(Move::new_wrc((1, 1), (1, 0, 0))).is_ok());
+        assert!(board.make_move(Move::new_bcc((3, 3, 0), (0, 1, 1))).is_ok());
+        assert!(board.make_move(Move::new_wrc((2, 1), (3, 1, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((3, 1), (3, 0, 0))).is_ok());
+        assert!(board.make_move(Move::new_wrc((3, 1), (3, 2, 0))).is_ok());
+
+        assert!(board.take_back_is_possible(PlayerSide::White));
+        assert!(board.make_move(Move::new_wcr((3, 1, 0), (2, 1))).is_ok());
+        assert!(board.make_move(Move::new_wcr((3, 2, 0), (3, 1))).is_ok());
+
+        assert!(board.make_move(Move::new_brc((4, 1), (3, 1, 0))).is_ok());
+        assert!(board.make_move(Move::new_wrc((2, 1), (3, 2, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((0, 2), (3, 3, 0))).is_ok());
+        assert!(board.make_move(Move::new_wcc((3, 2, 0), (0, 0, 1))).is_ok());
+        assert!(board.make_move(Move::new_bcc((3, 0, 0), (0, 1, 2))).is_ok());
+        assert!(board.make_move(Move::new_wrc((3, 1), (2, 0, 0))).is_ok());
+        assert!(board.make_move(Move::new_brc((1, 2), (3, 0, 0))).is_ok());
+        assert!(board.make_move(Move::new_wcc((1, 0, 0), (2, 0, 1))).is_ok());
+        assert!(board.make_move(Move::new_brc((2, 2), (1, 0, 0))).is_ok());
+        assert!(board.make_move(Move::new_wrc((4, 1), (1, 0, 1))).is_ok());
+        assert!(board.make_move(Move::new_brc((3, 2), (3, 2, 0))).is_ok());
+        assert!(board.make_move(Move::new_wcc((2, 0, 1), (0, 0, 2))).is_ok());
+        assert!(board.make_move(Move::new_brc((4, 2), (2, 1, 1))).is_ok());
+        assert!(board.make_move(Move::new_wrc((0, 2), (2, 2, 1))).is_ok());
+        assert!(board.make_move(Move::new_bcc((3, 0, 0), (1, 1, 2))).is_ok());
+        assert!(board.make_move(Move::new_wrc((1, 2), (3, 0, 0))).is_ok());
+
+        assert!(!board.move_is_possible(PlayerSide::Black));
+        assert!(board.make_move(Move::new_wrc((2, 2), (2, 0, 1))).is_ok());
+        assert!(!board.move_is_possible(PlayerSide::Black));
+        assert!(board.make_move(Move::new_wrc((3, 2), (1, 0, 2))).is_ok());
+        assert!(!board.move_is_possible(PlayerSide::Black));
+        assert!(board.make_move(Move::new_wrc((4, 2), (0, 0, 3))).is_ok());
+        assert!(board.is_game_over());
+
+        // [ ● ● ◯ ◯ ]  [ ◯ ◯ ◯ ]  [ ◯ ◯ ]  [ ◯ ]
+        // [ ◯ ● ◯ ● ]  [ ● ◯ ● ]  [ ● ● ]
+        // [ ● ● ◯ ● ]  [ ● ◯ ◯ ]
+        // [ ◯ ● ● ● ]
     }
 }

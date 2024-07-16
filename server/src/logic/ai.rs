@@ -55,7 +55,7 @@ impl AI {
             let mut rng = rand::thread_rng();
             let mv = moves[rng.gen::<usize>() % moves.len()];
 
-            self.board.make_move(mv);
+            let _ = self.board.make_move(mv);
         }
 
         self.board.clone()
@@ -90,7 +90,7 @@ impl AI {
                 .into_iter()
                 .map(|mv| {
                     let mut new_board = board.clone();
-                    new_board.make_move(mv);
+                    let _ = new_board.make_move(mv);
                     let mult = bool_to_int(board.get_turn() == new_board.get_turn());
 
                     (new_board, mv, mult)
@@ -142,7 +142,7 @@ impl AI {
                 score,
                 duration
             );
-            self.board.make_move(omove.unwrap());
+            let _ = self.board.make_move(omove.unwrap());
         }
 
         self.board.clone()
