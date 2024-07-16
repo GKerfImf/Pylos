@@ -1,5 +1,7 @@
+use crate::logic::amove::Move;
+
 use super::{board::Board, player_side::PlayerSide};
-use crate::logic::board::Move;
+
 use log::info;
 use rand::Rng;
 use std::time::Instant;

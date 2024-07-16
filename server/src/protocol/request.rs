@@ -1,4 +1,4 @@
-use crate::{logic::board::Move, state::game_description::GameUUID};
+use crate::{logic::amove::Move, state::game_description::GameUUID};
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Request {
