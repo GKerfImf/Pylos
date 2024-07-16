@@ -194,10 +194,7 @@ impl Board {
     }
 
     fn find_ball(&self, index: Index) -> Option<Ball> {
-        self.balls
-            .clone()
-            .into_iter()
-            .find(|ball| ball.index == index)
+        self.balls.iter().find(|&ball| ball.index == index).copied()
     }
 
     fn empty_index(&self, index: Index) -> bool {
@@ -221,8 +218,7 @@ impl Board {
 
     fn take_back_is_possible(&self, player: PlayerSide) -> bool {
         self.balls
-            .clone()
-            .into_iter()
+            .iter()
             .filter(|ball| ball.index.b == BoardSide::Center)
             .filter(|ball| ball.player == player)
             .any(|ball| !self.parent_exists(ball.index))
@@ -236,8 +232,7 @@ impl Board {
         };
 
         self.balls
-            .clone()
-            .into_iter()
+            .iter()
             .filter(|ball| ball.index.b == players_board_side)
             .collect::<Vec<_>>()
             .len()
@@ -301,12 +296,11 @@ impl Board {
         }
 
         self.balls
-            .clone()
-            .into_iter()
+            .iter()
             .filter(|ball| ball.index.b == BoardSide::Center)
             .filter(|ball| ball.player == player)
             .filter(|ball| !self.parent_exists(ball.index))
-            .any(|ball| !self.get_ghost_balls(ball).is_empty())
+            .any(|&ball| !self.get_ghost_balls(ball).is_empty())
     }
 
     fn player_color_matches_ball_color(&self, mv: Move) -> bool {
@@ -466,11 +460,10 @@ impl Board {
 
         let to_res: Vec<Move> = self
             .balls
-            .clone()
-            .into_iter()
+            .iter()
             .find(|ball| ball.index.b == board_side)
             .into_iter()
-            .flat_map(|from| {
+            .flat_map(|&from| {
                 self.get_ghost_balls(from)
                     .into_iter()
                     .map(move |to| Move { from, to })
@@ -479,12 +472,11 @@ impl Board {
 
         let from_res: Vec<Move> = self
             .balls
-            .clone()
-            .into_iter()
+            .iter()
             .filter(|ball| ball.player == self.get_turn())
             .filter(|ball| ball.index.b == BoardSide::Center)
             .filter(|ball| !self.parent_exists(ball.index))
-            .flat_map(|from| {
+            .flat_map(|&from| {
                 self.get_ghost_balls(from)
                     .into_iter()
                     .map(move |to| Move { from, to })
