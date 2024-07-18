@@ -2,7 +2,7 @@ use std::ops::Not;
 
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum PlayerSide {
     White = 0,

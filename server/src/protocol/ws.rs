@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::{
-    logic::{ai::AI, amove::Move, player_side::PlayerSide},
+    logic::{ai::AI, amove::Move, board::BoardFrontend, player_side::PlayerSide},
     protocol::{request::Request, response::Response, result::Result},
     state::{
         client::{Client, ClientRole, Clients, UserUUID},
@@ -23,7 +23,7 @@ use warp::{
 async fn change_name(new_user_name: String, client_uuid: &str, clients: &Clients) {
     match clients.lock().await.get_mut(client_uuid) {
         Some(client) => {
-            client.user_name = new_user_name.clone();
+            client.user_name.clone_from(&new_user_name);
         }
         None => {
             warn!("Client UUID does not exist, ignore"); // TODO
@@ -191,7 +191,7 @@ async fn broadcast_participants(game_uuid: GameUUID, clients: &Clients, games: &
 
 async fn get_game_state(game_uuid: String, clients: &Clients, games: &Games) {
     let res = Response::GameState {
-        game_state: games.lock().await.get(&game_uuid).unwrap().state.clone(),
+        game_state: BoardFrontend::new(games.lock().await.get(&game_uuid).unwrap().state.clone()),
     };
 
     // TODO: do not send response to everyone
@@ -208,7 +208,7 @@ async fn make_move(mv: Move, game_uuid: String, clients: &Clients, games: &Games
         Some(game) => {
             let _ = game.state.make_move(mv);
             Response::GameState {
-                game_state: game.state.clone(),
+                game_state: BoardFrontend::new(game.state.clone()),
             }
         }
         None => {
@@ -237,7 +237,7 @@ async fn make_ai_move(game_uuid: String, clients: &Clients, games: &Games) {
             game.state = ai.minmax_moves();
 
             Response::GameState {
-                game_state: game.state.clone(),
+                game_state: BoardFrontend::new(game.state.clone()),
             }
         }
         None => {

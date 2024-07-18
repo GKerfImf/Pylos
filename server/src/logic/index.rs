@@ -15,3 +15,10 @@ impl fmt::Display for Index {
         write!(f, "{}{}{}{}", self.b, self.x, self.y, self.z)
     }
 }
+
+impl Index {
+    pub fn new_c(x: i8, y: i8, z: i8) -> Self {
+        let b = BoardSide::Center;
+        Index { b, x, y, z }
+    }
+}

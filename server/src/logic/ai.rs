@@ -4,7 +4,7 @@ use super::{board::Board, player_side::PlayerSide};
 
 use log::info;
 use rand::Rng;
-use std::time::Instant;
+use std::{collections::HashMap, time::Instant};
 
 pub struct AI {
     pub side: PlayerSide,
@@ -64,13 +64,21 @@ impl AI {
     }
 
     pub fn minmax_moves(&mut self) -> Board {
-        fn minmax(board: Board, fuel: i32) -> (i32, Option<Move>) {
-            fn value(board: &Board) -> i32 {
-                board.number_of_balls_in_reserve(board.get_turn()) as i32
-                    - board.number_of_balls_in_reserve(!board.get_turn()) as i32
+        fn minmax(
+            board: Board,
+            fuel: i32,
+            hash: &mut HashMap<Board, (i32, Option<Move>)>,
+        ) -> (i32, Option<Move>) {
+            if let Some(res) = hash.get(&board) {
+                return *res;
             }
 
             if fuel <= 0 {
+                fn value(board: &Board) -> i32 {
+                    board.number_of_balls_in_reserve(board.get_turn()) as i32
+                        - board.number_of_balls_in_reserve(!board.get_turn()) as i32
+                }
+
                 let moves = board.get_valid_moves();
                 if moves.is_empty() {
                     return (value(&board), None);
@@ -80,16 +88,22 @@ impl AI {
             }
 
             if board.is_game_over() {
-                if board.winner.unwrap() == board.get_turn() {
+                if board.get_winner().unwrap() == board.get_turn() {
                     return (1000, None);
                 } else {
                     return (-1000, None);
                 }
             }
 
-            let mut boards = board
-                .get_valid_moves()
+            let moves = board.get_valid_moves();
+
+            let n: i32 = f32::powf(fuel as f32, 0.5).round() as i32;
+            let n: i32 = if n < 25 { 1 } else { n };
+            let n: i32 = n.min(moves.len() as i32);
+
+            let res = moves
                 .into_iter()
+                .take(n as usize)
                 .map(|mv| {
                     let mut new_board = board.clone();
                     let _ = new_board.make_move(mv);
@@ -97,40 +111,32 @@ impl AI {
 
                     (new_board, mv, mult)
                 })
-                .collect::<Vec<_>>();
-
-            let n: i32 = f32::powf(fuel as f32, 0.5).round() as i32;
-            let n: i32 = if n < 25 { 1 } else { n };
-            let n: i32 = n.min(boards.len() as i32);
-
-            boards.sort_by_key(|(board, _, _)| value(board));
-
-            let moves = boards
-                .into_iter()
-                .take(n as usize)
-                .map(|(board, mv, mult)| (minmax(board, fuel / n - 1).0, mv, mult))
+                .map(|(board, mv, mult)| (minmax(board, fuel / n - 1, hash).0, mv, mult))
                 .map(|(score, mv, mult)| (mult * score, Some(mv)))
                 .collect::<Vec<_>>();
 
-            let average_score = average(moves.clone().into_iter().map(|(score, _)| score))
+            let average_score = average(res.clone().into_iter().map(|(score, _)| score))
                 .unwrap()
                 .round() as i32;
 
-            let best_move = moves
+            let best_move = res
                 .clone()
                 .into_iter()
                 .max_by_key(|(score, _)| *score)
                 .unwrap()
                 .1;
 
+            hash.insert(board, (average_score, best_move));
+
             (average_score, best_move)
         }
 
-        let fuel = 250_000;
+        let fuel = 1_000_000;
+        let mut hash: HashMap<Board, (i32, Option<Move>)> = HashMap::new();
 
         while self.board.get_turn() == self.side && !self.board.is_game_over() {
             let start = Instant::now();
-            let (score, omove) = minmax(self.board.clone(), fuel);
+            let (score, omove) = minmax(self.board.clone(), fuel, &mut hash);
             let duration = start.elapsed();
 
             if omove.is_none() {
