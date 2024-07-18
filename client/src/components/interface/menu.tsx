@@ -1,11 +1,9 @@
-import React, { useContext, useState } from "react";
-import { SendMessage } from "react-use-websocket";
+import React from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "src/components/ui/accordion";
 import MenuHeader from "src/components/interface/header";
 import Rules from "src/components/interface/pylos_rules";
 import ProfileTab from "src/components/interface/profile-tab";
 import Play from "src/components/interface/play";
-import { WebSocketContext } from "src/contexts/ws-context";
 import "src/styles.css";
 
 const Menu: React.FC = () => {
