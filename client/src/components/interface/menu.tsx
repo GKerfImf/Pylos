@@ -8,7 +8,7 @@ import "src/styles.css";
 
 const Menu: React.FC = () => {
   return (
-    <div className="w-72 h-4/6 p-3 border rounded-xl bg-slate-900 border-slate-900 shadow-lg shadow-black flex-row justify-center items-center overflow-scroll scrollbar-hide">
+    <div className="w-72 h-4/6 p-3 border rounded-xl bg-slate-900 border-slate-900 shadow-lg shadow-black flex-row justify-center items-center overflow-scroll no-scrollbar">
       <MenuHeader />
 
       <Accordion type="single" collapsible>
