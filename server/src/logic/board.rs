@@ -146,6 +146,10 @@ impl Board {
         Ok(())
     }
 
+    pub fn get_move_number(&self) -> u8 {
+        self.move_number
+    }
+
     fn pass_turn(&mut self) -> Result<(), &'static str> {
         self.turn = !self.get_turn();
         Ok(())

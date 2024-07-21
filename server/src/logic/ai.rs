@@ -64,6 +64,20 @@ impl AI {
     }
 
     pub fn minmax_moves(&mut self) -> Board {
+        fn terminate_search(board: &Board) -> (i32, Option<Move>) {
+            fn value(board: &Board) -> i32 {
+                board.number_of_balls_in_reserve(board.get_turn()) as i32
+                    - board.number_of_balls_in_reserve(!board.get_turn()) as i32
+            }
+
+            let moves = board.get_valid_moves();
+            if moves.is_empty() {
+                (value(board), None)
+            } else {
+                (value(board), Some(moves[0]))
+            }
+        }
+
         fn minmax(
             board: Board,
             fuel: i32,
@@ -73,18 +87,11 @@ impl AI {
                 return *res;
             }
 
+            if board.get_move_number() > 200 {
+                return terminate_search(&board);
+            }
             if fuel <= 0 {
-                fn value(board: &Board) -> i32 {
-                    board.number_of_balls_in_reserve(board.get_turn()) as i32
-                        - board.number_of_balls_in_reserve(!board.get_turn()) as i32
-                }
-
-                let moves = board.get_valid_moves();
-                if moves.is_empty() {
-                    return (value(&board), None);
-                } else {
-                    return (value(&board), Some(moves[0]));
-                }
+                return terminate_search(&board);
             }
 
             if board.is_game_over() {
