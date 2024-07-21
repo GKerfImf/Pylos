@@ -15,7 +15,7 @@ const OpponentSelect: React.FC<{ opponent: any; setOpponent: any }> = ({ opponen
   return (
     <div className="flex flex-col space-y-1.5">
       <Label htmlFor="opponent">Opponent</Label>
-      <Select onValueChange={setOpponent} defaultValue="player" disabled={true}>
+      <Select onValueChange={setOpponent} defaultValue="computer" disabled={true}>
         <SelectTrigger id="opponent">
           <SelectValue placeholder="Player" />
         </SelectTrigger>
@@ -46,6 +46,23 @@ const SideSelect: React.FC<{ side: any; setSide: any }> = ({ side, setSide }) =>
   );
 };
 
+const TimeControlSelect: React.FC<{ timeControl: any; setTimeControl: any }> = ({ timeControl, setTimeControl }) => {
+  return (
+    <div className="flex flex-col space-y-1.5">
+      <Label htmlFor="time-control">Time control</Label>
+      <Select onValueChange={setTimeControl} defaultValue="unlimited" disabled>
+        <SelectTrigger id="unlimited">
+          <SelectValue placeholder="Unlimited" />
+        </SelectTrigger>
+        <SelectContent position="popper">
+          <SelectItem value="unlimited">Unlimited</SelectItem>
+          <SelectItem value="real-time">Real-time</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
+
 const TimeSelect: React.FC<{ time: any; setTime: any }> = ({ time, setTime }) => {
   return (
     <div className="flex flex-col space-y-1.5">
@@ -67,8 +84,9 @@ const Increment: React.FC<{ increment: any; setIncrement: any }> = ({ increment,
 const CreateGameTab: React.FC = () => {
   const navigate = useNavigate();
 
-  const [opponent, setOpponent] = useState<"player" | "computer">("player");
+  const [opponent, setOpponent] = useState<"player" | "computer">("computer");
   const [side, setSide] = useState<"random" | "white" | "black">("random");
+  const [timeControl, setTimeControl] = useState<"unlimited" | "real-time">("unlimited");
   const [time, setTime] = useState(5);
   const [increment, setIncrement] = useState(0);
 
@@ -92,8 +110,13 @@ const CreateGameTab: React.FC = () => {
       <CardContent className="space-y-2">
         <OpponentSelect opponent={opponent} setOpponent={setOpponent} />
         <SideSelect side={side} setSide={setSide} />
-        <TimeSelect time={time} setTime={setTime} />
-        <Increment increment={increment} setIncrement={setIncrement} />
+        <TimeControlSelect timeControl={timeControl} setTimeControl={setTimeControl} />
+        {timeControl == "real-time" ? (
+          <div>
+            <TimeSelect time={time} setTime={setTime} />
+            <Increment increment={increment} setIncrement={setIncrement} />
+          </div>
+        ) : null}
       </CardContent>
 
       <CardFooter>
@@ -103,6 +126,7 @@ const CreateGameTab: React.FC = () => {
               CreateGame: {
                 opponent: opponent,
                 side: side,
+                time_control: timeControl,
                 time: time,
                 increment: increment,
               },
@@ -166,12 +190,18 @@ const JoinGameTab: React.FC = () => {
   useEffect(() => {
     subscribe("AvailableGames", "JoinGameTab", (req: TAvailableGames) => {
       setGames(
-        req.AvailableGames.game_descriptions.map((description: any, index: number) => ({
-          game_uuid: description.game_uuid,
-          user: description.creator_name,
-          side: description.side_selection,
-          time: (description.time_control.time.secs / 60).toFixed(0) + "+" + description.time_control.increment.secs,
-        }))
+        req.AvailableGames.game_descriptions.map((description: any, index: number) => {
+          let time =
+            description.time_control == null
+              ? "∞"
+              : (description.time_control.time.secs / 60).toFixed(0) + "+" + description.time_control.increment.secs;
+          return {
+            game_uuid: description.game_uuid,
+            user: description.creator_name,
+            side: description.side_selection,
+            time: time,
+          };
+        })
       );
     });
     return () => {
@@ -205,7 +235,7 @@ const JoinGameTab: React.FC = () => {
             {/* <TableHead className="text-right">Amount</TableHead> */}
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className=" cursor-default">
           {games.length > 0
             ? games.map((data, index) => (
                 <TableRow onClick={() => navigate(`/games/${data.game_uuid}`)} key={index}>

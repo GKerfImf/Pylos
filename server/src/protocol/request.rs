@@ -7,8 +7,9 @@ pub enum Request {
     },
 
     CreateGame {
-        opponent: String, // TODO: proper type
-        side: String,     // TODO: proper type
+        opponent: String,     // TODO: proper type
+        side: String,         // TODO: proper type
+        time_control: String, // TODO: proper type
         time: u64,
         increment: u64,
     },

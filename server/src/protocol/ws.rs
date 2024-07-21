@@ -48,6 +48,7 @@ async fn change_name(new_user_name: String, client_uuid: &str, clients: &Clients
 async fn create_game(
     time: u64,
     increment: u64,
+    time_control: String,
     client_uuid: &str,
     clients: &Clients,
     games: &Games,
@@ -61,14 +62,21 @@ async fn create_game(
         .clone();
 
     let game_uuid: String = Uuid::new_v4().simple().to_string();
+
+    let time_control_opt = if time_control == "real-time" {
+        Some(TimeControl {
+            time: Duration::from_secs(time),
+            increment: Duration::from_secs(increment),
+        })
+    } else {
+        None
+    };
+
     let game_description = GameDescription {
         game_uuid: game_uuid.clone(),
         creator_name: user_name.clone(),
         side_selection: SideSelection::Random,
-        time_control: TimeControl {
-            time: Duration::from_secs(time),
-            increment: Duration::from_secs(increment),
-        },
+        time_control: time_control_opt,
     };
 
     let game = Game::new(client_uuid.to_string(), game_description);
@@ -279,7 +287,7 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             return;
         }
     };
-    // info!("[process_client_msg]: received request {:?}", req);
+    info!("[process_client_msg]: {:#?}", req);
 
     match req {
         Request::ChangeName { new_user_name } => {
@@ -288,9 +296,20 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
         Request::CreateGame {
             opponent: _,
             side: _,
+            time_control,
             time,
             increment,
-        } => create_game(time * 60, increment, client_uuid, clients, games).await,
+        } => {
+            create_game(
+                time * 60,
+                increment,
+                time_control,
+                client_uuid,
+                clients,
+                games,
+            )
+            .await
+        }
         Request::GetAvailableGames {} => get_available_games(client_uuid, clients, games).await,
         Request::JoinGame { game_uuid } => {
             join_game(client_uuid, game_uuid.clone(), clients, games).await;

@@ -21,10 +21,13 @@ const AvailableGames = z.object({
         creator_name: z.string(),
         game_uuid: z.string(),
         side_selection: z.string(),
-        time_control: z.object({
-          increment: z.object({ nanos: z.number(), secs: z.number() }),
-          time: z.object({ nanos: z.number(), secs: z.number() }),
-        }),
+        time_control: z.union([
+          z.null(),
+          z.object({
+            increment: z.object({ nanos: z.number(), secs: z.number() }),
+            time: z.object({ nanos: z.number(), secs: z.number() }),
+          }),
+        ]),
       })
     ),
   }),

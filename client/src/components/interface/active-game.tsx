@@ -58,8 +58,8 @@ const ActiveGame: React.FC = () => {
     const badgeVariants = cva("rounded-sm mr-1 px-2 items-center text-xs", {
       variants: {
         color: {
-          white: "border-slate-400 text-slate-900",
-          black: "border-slate-600 text-slate-100",
+          white: "border-slate-400 text-slate-900 blur",
+          black: "border-slate-600 text-slate-100 blur",
         },
       },
     });

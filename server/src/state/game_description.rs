@@ -20,5 +20,5 @@ pub struct GameDescription {
     pub game_uuid: GameUUID,
     pub creator_name: String,
     pub side_selection: SideSelection,
-    pub time_control: TimeControl,
+    pub time_control: Option<TimeControl>, // None if unlimited
 }
