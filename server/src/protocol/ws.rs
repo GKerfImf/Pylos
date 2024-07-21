@@ -46,6 +46,7 @@ async fn change_name(new_user_name: String, client_uuid: &str, clients: &Clients
 }
 
 async fn create_game(
+    side: SideSelection,
     time: u64,
     increment: u64,
     time_control: String,
@@ -75,7 +76,7 @@ async fn create_game(
     let game_description = GameDescription {
         game_uuid: game_uuid.clone(),
         creator_name: user_name.clone(),
-        side_selection: SideSelection::Random,
+        side_selection: side,
         time_control: time_control_opt,
     };
 
@@ -295,12 +296,13 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
         }
         Request::CreateGame {
             opponent: _,
-            side: _,
+            side,
             time_control,
             time,
             increment,
         } => {
             create_game(
+                side,
                 time * 60,
                 increment,
                 time_control,

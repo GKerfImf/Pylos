@@ -28,18 +28,21 @@ const OpponentSelect: React.FC<{ opponent: any; setOpponent: any }> = ({ opponen
   );
 };
 
-const SideSelect: React.FC<{ side: any; setSide: any }> = ({ side, setSide }) => {
+const SideSelect: React.FC<{
+  side: "Random" | "AlwaysWhite" | "AlwaysBlack";
+  setSide: (newSide: "Random" | "AlwaysWhite" | "AlwaysBlack") => void;
+}> = ({ side, setSide }) => {
   return (
     <div className="flex flex-col space-y-1.5">
       <Label htmlFor="side">Side</Label>
-      <Select onValueChange={setSide} defaultValue="random" disabled={true}>
+      <Select onValueChange={setSide} defaultValue="Random">
         <SelectTrigger id="side">
           <SelectValue placeholder="Random" />
         </SelectTrigger>
         <SelectContent position="popper">
-          <SelectItem value="random">Random</SelectItem>
-          <SelectItem value="white">White</SelectItem>
-          <SelectItem value="black">Black</SelectItem>
+          <SelectItem value="Random">Random</SelectItem>
+          <SelectItem value="AlwaysWhite">White</SelectItem>
+          <SelectItem value="AlwaysBlack">Black</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -85,7 +88,7 @@ const CreateGameTab: React.FC = () => {
   const navigate = useNavigate();
 
   const [opponent, setOpponent] = useState<"player" | "computer">("computer");
-  const [side, setSide] = useState<"random" | "white" | "black">("random");
+  const [side, setSide] = useState<"Random" | "AlwaysWhite" | "AlwaysBlack">("Random");
   const [timeControl, setTimeControl] = useState<"unlimited" | "real-time">("unlimited");
   const [time, setTime] = useState(5);
   const [increment, setIncrement] = useState(0);
@@ -146,31 +149,30 @@ const JoinGameTab: React.FC = () => {
 
   const navigate = useNavigate();
 
-  const ColorIcon: React.FC<{ color: string }> = ({ color }) => {
+  const ColorIcon: React.FC<{ color: "AlwaysWhite" | "AlwaysBlack" | "Random" }> = ({ color }) => {
     switch (color) {
-      case "White": {
+      case "AlwaysWhite": {
         return (
-          <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+          <svg className="h-4 flex w-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
             <path d="M464 256A208 208 0 1 0 48 256a208 208 0 1 0 416 0zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256z" />
           </svg>
         );
       }
-      case "Black": {
+      case "AlwaysBlack": {
         return (
-          <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+          <svg className="h-4 flex w-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
             <path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512z" />
           </svg>
         );
       }
       case "Random": {
         return (
-          <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+          <svg className="h-4 flex w-full" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
             <path d="M448 256c0-106-86-192-192-192V448c106 0 192-86 192-192zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256z" />
           </svg>
         );
       }
     }
-    console.warn("Unknown color:", color);
     return null;
   };
 
@@ -179,7 +181,7 @@ const JoinGameTab: React.FC = () => {
   type TGame = {
     game_uuid: String;
     user: String;
-    side: "White" | "Black" | "Random";
+    side: "AlwaysWhite" | "AlwaysBlack" | "Random";
     time: String;
   };
   const [games, setGames] = useState<TGame[]>([]);

@@ -1,4 +1,7 @@
-use crate::{logic::amove::Move, state::game_description::GameUUID};
+use crate::{
+    logic::amove::Move,
+    state::game_description::{GameUUID, SideSelection},
+};
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Request {
@@ -7,8 +10,8 @@ pub enum Request {
     },
 
     CreateGame {
-        opponent: String,     // TODO: proper type
-        side: String,         // TODO: proper type
+        opponent: String, // TODO: proper type
+        side: SideSelection,
         time_control: String, // TODO: proper type
         time: u64,
         increment: u64,

@@ -1,4 +1,5 @@
-// use rand::Rng;
+use log::warn;
+use rand::Rng;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
@@ -23,16 +24,18 @@ pub type Games = Arc<Mutex<HashMap<GameUUID, Game>>>;
 
 impl Game {
     pub fn new(_client_uuid: UserUUID, game_description: GameDescription) -> Game {
-        // TODO: For now, let's assume that we always assign white to the creator of a room
-        // let mut rng = rand::thread_rng();
-
-        // let r: u8 = rng.gen();
-        let r = 1;
+        warn!("{:?}", game_description);
+        let mut rng = rand::thread_rng();
+        let b: u8 = match game_description.side_selection {
+            super::game_description::SideSelection::AlwaysWhite => 1,
+            super::game_description::SideSelection::AlwaysBlack => 0,
+            super::game_description::SideSelection::Random => rng.gen(),
+        };
 
         Game {
             players: vec![],
-            player_white: r % 2,
-            player_black: (r + 1) % 2,
+            player_white: b % 2,
+            player_black: (b + 1) % 2,
 
             watching: vec![],
             state: Board::new(),
