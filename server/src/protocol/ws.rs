@@ -115,6 +115,12 @@ async fn join_game(client_uuid: &str, game_uuid: String, clients: &Clients, game
     let mut locked = games.lock().await;
     let client_role = match locked.get_mut(&game_uuid) {
         Some(game) => {
+            if game.players.iter().any(|player| player == client_uuid)
+                || game.watching.iter().any(|viewer| viewer == client_uuid)
+            {
+                return;
+            }
+
             if game.players.len() < 2 {
                 game.players.push(client_uuid.to_string());
                 let pick_side_aux =
@@ -168,14 +174,17 @@ async fn broadcast_participants(game_uuid: GameUUID, clients: &Clients, games: &
     drop(locked);
 
     let locked = clients.lock().await;
-
     let res = Response::GameParticipants {
         participants: participants
             .iter()
-            .filter_map(|(uuid, role)| {
-                locked
-                    .get(uuid)
-                    .map(|client| (client.user_name.clone(), role.clone()))
+            .map(|(uuid, role)| {
+                (
+                    locked
+                        .get(uuid)
+                        .map(|client| client.user_name.clone())
+                        .unwrap_or("Disconnected".to_string()),
+                    role.clone(),
+                )
             })
             .collect(),
         game_uuid,
