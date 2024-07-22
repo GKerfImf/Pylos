@@ -158,7 +158,7 @@ function ballsReducer(state: any, action: any) {
     const newBalls: Ball[] = addBall(removeBall(balls, from), to);
 
     return {
-      turn: state.turn,
+      turn: null,
       takeDownRule: state.takeDownRule,
       nmove: state.nmove + 1,
       selectedBall: newSelectedBall,
