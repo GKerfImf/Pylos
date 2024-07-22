@@ -1,7 +1,7 @@
 import React, { ReactNode, useCallback, useEffect, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
-import Arena from "src/components/arena";
+import Arena from "src/components/game/arena";
 
 import * as THREE from "three";
 import {

@@ -1,7 +1,7 @@
 import React from "react";
 import Menu from "./components/interface/menu";
 import ActiveGame from "./components/interface/active-game";
-import PylosCanvas from "./components/canvas";
+import PylosCanvas from "./components/game/canvas";
 import { WebSocketProvider } from "./contexts/ws-context";
 
 import { createBrowserRouter, RouterProvider } from "react-router-dom";

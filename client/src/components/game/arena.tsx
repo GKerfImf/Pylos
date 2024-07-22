@@ -8,11 +8,11 @@ import Player from "src/types/player";
 import Index3D from "src/types/index";
 import Coord3D from "src/types/coord";
 import TypedMap from "src/types/typed_map";
-import { Sphere, GhostSphere } from "src/components/spheres";
+import { Sphere, GhostSphere } from "src/components/game/spheres";
 import { WebSocketContext } from "src/contexts/ws-context";
 import { useParams } from "react-router-dom";
 import { TGameState } from "src/types/response";
-const Platform = React.lazy(() => import("src/components/platform"));
+const Platform = React.lazy(() => import("src/components/game/platform"));
 
 function findParents(index: Index3D): Index3D[] {
   if (index.b != Board.Main) {
