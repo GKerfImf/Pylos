@@ -11,7 +11,16 @@ type TRequest =
         client_uuid: string;
       };
     }
-  | { CreateGame: {} }
+  | {
+      CreateGame: {
+        game_description: {
+          game_uuid: string | null;
+          creator_name: string;
+          side_selection: "Random" | "AlwaysWhite" | "AlwaysBlack";
+          time_control: string | null;
+        };
+      };
+    }
   | { JoinGame: { game_uuid: string } }
   | { GetAvailableGames: {} }
   | { GetGameState: { game_uuid: string } }

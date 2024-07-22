@@ -23,7 +23,6 @@ pub type Games = Arc<Mutex<HashMap<GameUUID, Game>>>;
 
 impl Game {
     pub fn new(_client_uuid: UserUUID, game_description: GameDescription) -> Game {
-
         let mut rng = rand::thread_rng();
         let b: u8 = match game_description.side_selection {
             super::game_description::SideSelection::AlwaysWhite => 1,

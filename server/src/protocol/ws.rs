@@ -1,12 +1,10 @@
-use std::time::Duration;
-
 use crate::{
     logic::{ai::AI, amove::Move, board::BoardFrontend, player_side::PlayerSide},
     protocol::{request::Request, response::Response, result::Result},
     state::{
         client::{Client, ClientRole, Clients, UserUUID},
         game::{Game, Games},
-        game_description::{GameDescription, GameUUID, SideSelection, TimeControl},
+        game_description::{GameDescription, GameUUID},
     },
 };
 use futures::{FutureExt, StreamExt};
@@ -46,10 +44,7 @@ async fn change_name(new_user_name: String, client_uuid: &str, clients: &Clients
 }
 
 async fn create_game(
-    side: SideSelection,
-    time: u64,
-    increment: u64,
-    time_control: String,
+    mut game_description: GameDescription,
     client_uuid: &str,
     clients: &Clients,
     games: &Games,
@@ -61,25 +56,9 @@ async fn create_game(
         .expect("Client UUID does not exist")
         .user_name
         .clone();
-
     let game_uuid: String = Uuid::new_v4().simple().to_string();
 
-    let time_control_opt = if time_control == "real-time" {
-        Some(TimeControl {
-            time: Duration::from_secs(time),
-            increment: Duration::from_secs(increment),
-        })
-    } else {
-        None
-    };
-
-    let game_description = GameDescription {
-        game_uuid: game_uuid.clone(),
-        creator_name: user_name.clone(),
-        side_selection: side,
-        time_control: time_control_opt,
-    };
-
+    game_description.game_uuid = Some(game_uuid.clone());
     let game = Game::new(client_uuid.to_string(), game_description);
 
     games.lock().await.insert(game_uuid.clone(), game);
@@ -280,11 +259,13 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             Ok(req) => req,
             Err(e) => {
                 warn!("error while parsing message to topics request: {}", e);
+                warn!("{:#?}", msg);
                 return;
             }
         },
         Err(_) => {
-            warn!("error while parsing message to string");
+            warn!("[process_client_msg]: error while parsing message to string: ");
+            warn!("{:#?}", msg);
             return;
         }
     };
@@ -294,23 +275,8 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
         Request::ChangeName { new_user_name } => {
             change_name(new_user_name, client_uuid, clients).await
         }
-        Request::CreateGame {
-            opponent: _,
-            side,
-            time_control,
-            time,
-            increment,
-        } => {
-            create_game(
-                side,
-                time * 60,
-                increment,
-                time_control,
-                client_uuid,
-                clients,
-                games,
-            )
-            .await
+        Request::CreateGame { game_description } => {
+            create_game(game_description, client_uuid, clients, games).await
         }
         Request::GetAvailableGames {} => get_available_games(client_uuid, clients, games).await,
         Request::JoinGame { game_uuid } => {

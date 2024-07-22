@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Label } from "src/components/ui/label";
 import { Slider } from "src/components/ui/slider";
 import { Button } from "src/components/ui/button";
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "s
 import "src/styles.css";
 import { WebSocketContext } from "src/contexts/ws-context";
 import { TAvailableGames, TCreateGame } from "src/types/response";
+import { TRequest } from "src/types/request";
 
 const OpponentSelect: React.FC<{ opponent: any; setOpponent: any }> = ({ opponent, setOpponent }) => {
   return (
@@ -104,6 +105,40 @@ const CreateGameTab: React.FC = () => {
     };
   });
 
+  // TODO: turn into hook
+  // TODO: delete duplicate
+  const entryProfileName = "pylos_profile_name";
+  const getProfileName = () => {
+    const entryID = "pylos_uuid";
+    if (!localStorage.getItem(entryID)) {
+      console.warn("[ProfileTab]: [pylos_uuid] does not exist");
+    }
+
+    if (!localStorage.getItem(entryProfileName)) {
+      return `anon-${localStorage.getItem(entryID)!.slice(0, 8)}`;
+    } else {
+      return localStorage.getItem(entryProfileName)!;
+    }
+  };
+
+  const createGame = () => {
+    // TODO: implement the time control
+    const time_control = timeControl == "unlimited" ? null : "not implemented";
+
+    const req: TRequest = {
+      CreateGame: {
+        game_description: {
+          game_uuid: null,
+          creator_name: getProfileName(),
+          side_selection: side,
+          time_control: time_control,
+        },
+      },
+    };
+
+    send(req);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -123,20 +158,7 @@ const CreateGameTab: React.FC = () => {
       </CardContent>
 
       <CardFooter>
-        <Button
-          onClick={() =>
-            send({
-              CreateGame: {
-                opponent: opponent,
-                side: side,
-                time_control: timeControl,
-                time: time,
-                increment: increment,
-              },
-            })
-          }
-          size="sm"
-        >
+        <Button onClick={createGame} size="sm">
           Start
         </Button>
       </CardFooter>

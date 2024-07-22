@@ -14,9 +14,9 @@ const ProfileTab: React.FC = () => {
     setName(e.target.value);
   };
 
-  // TODO?: move to the server
   const entryProfileName = "pylos_profile_name";
 
+  // TODO: turn into hook
   const getProfileName = () => {
     const entryID = "pylos_uuid";
     if (!localStorage.getItem(entryID)) {
