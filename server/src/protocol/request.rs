@@ -5,12 +5,24 @@ use crate::{
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Request {
-    ChangeName { new_user_name: String },
+    ChangeProfileInfo {
+        new_user_name: String,
+        new_user_avatar: String,
+    },
 
-    CreateGame { game_description: GameDescription },
-    JoinGame { game_uuid: GameUUID },
+    CreateGame {
+        game_description: GameDescription,
+    },
+    JoinGame {
+        game_uuid: GameUUID,
+    },
     GetAvailableGames {},
-    GetGameState { game_uuid: GameUUID },
+    GetGameState {
+        game_uuid: GameUUID,
+    },
 
-    MakeMove { game_uuid: GameUUID, mv: Move },
+    MakeMove {
+        game_uuid: GameUUID,
+        mv: Move,
+    },
 }

@@ -18,10 +18,16 @@ use warp::{
     reply::Reply,
 };
 
-async fn change_name(new_user_name: String, client_uuid: &str, clients: &Clients) {
+async fn change_profile_info(
+    new_user_name: String,
+    new_user_avatar: String,
+    client_uuid: &str,
+    clients: &Clients,
+) {
     match clients.lock().await.get_mut(client_uuid) {
         Some(client) => {
             client.user_name.clone_from(&new_user_name);
+            client.user_avatar_uuid.clone_from(&new_user_avatar);
         }
         None => {
             warn!("Client UUID does not exist, ignore"); // TODO
@@ -29,10 +35,11 @@ async fn change_name(new_user_name: String, client_uuid: &str, clients: &Clients
         }
     }
 
-    let res = Response::ChangeName {
+    let res = Response::ChangeProfileInfo {
         status: 200,
         client_uuid: client_uuid.to_string(),
         user_name: new_user_name,
+        user_avatar: new_user_avatar,
     };
 
     // TODO: do not send response to everyone
@@ -166,13 +173,15 @@ async fn broadcast_participants(game_uuid: GameUUID, clients: &Clients, games: &
         participants: participants
             .iter()
             .map(|(uuid, role)| {
-                (
-                    locked
-                        .get(uuid)
-                        .map(|client| client.user_name.clone())
-                        .unwrap_or("Disconnected".to_string()),
-                    role.clone(),
-                )
+                if let Some(client) = locked.get(uuid) {
+                    (
+                        client.user_name.clone(),
+                        client.user_avatar_uuid.clone(),
+                        role.clone(),
+                    )
+                } else {
+                    ("Disconnected".to_string(), "000".to_string(), role.clone())
+                }
             })
             .collect(),
         game_uuid,
@@ -272,9 +281,10 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
     info!("[process_client_msg]: {:#?}", req);
 
     match req {
-        Request::ChangeName { new_user_name } => {
-            change_name(new_user_name, client_uuid, clients).await
-        }
+        Request::ChangeProfileInfo {
+            new_user_name,
+            new_user_avatar,
+        } => change_profile_info(new_user_name, new_user_avatar, client_uuid, clients).await,
         Request::CreateGame { game_description } => {
             create_game(game_description, client_uuid, clients, games).await
         }

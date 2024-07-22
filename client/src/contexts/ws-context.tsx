@@ -2,47 +2,17 @@ import React, { createContext, useEffect, useRef, useState } from "react";
 import useWebSocket from "react-use-websocket";
 import { TRequest } from "src/types/request";
 import { Response, TResponse } from "src/types/response";
-import { toast, useToast } from "src/components/ui/use-toast";
+import useLocalState from "src/hooks/local-storage";
 
-const entryID = "pylos_uuid";
-const entryProfileName = "pylos_profile_name";
-
-const generateUserUUID = (callback: (_: string) => void) => {
-  // https://hitchhikers.yext.com/guides/analyze-trends-with-visitor-analytics/07-cookies-visitors/
-  function create_UUID() {
-    var dt = new Date().getTime();
-    var uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-      var r = (dt + Math.random() * 16) % 16 | 0;
-      dt = Math.floor(dt / 16);
-      return (c == "x" ? r : (r & 0x3) | 0x8).toString(16);
-    });
-    return uuid;
-  }
-
-  if (!localStorage.getItem(entryID)) {
-    const newPylosUUID = create_UUID();
-    localStorage.setItem(entryID, newPylosUUID);
-  }
-
-  callback(localStorage.getItem(entryID)!);
-};
-
-const generateUserName = (callback: (_: string) => void) => {
-  if (!localStorage.getItem(entryID)) {
-    console.warn("[ws-context]: [pylos_uuid] does not exist");
-  }
-
-  if (!localStorage.getItem(entryProfileName)) {
-    callback(`anon-${localStorage.getItem(entryID)!.slice(0, 8)}`);
-  } else {
-    callback(localStorage.getItem(entryProfileName)!);
-  }
-};
-
-const registerClient = async (userName: String, userUUID: string, callback: (_: string) => void) => {
+const registerClient = async (
+  userName: String,
+  userUUID: string,
+  userAvatar: string,
+  callback: (_: string) => void
+) => {
   const response = await fetch(`http://localhost:8000/clients/`, {
     method: "POST",
-    body: JSON.stringify({ user_name: userName, user_uuid: userUUID }),
+    body: JSON.stringify({ user_name: userName, user_uuid: userUUID, user_avatar_uuid: userAvatar }),
     credentials: "include",
     headers: {
       "Content-type": "application/json; charset=UTF-8",
@@ -72,9 +42,18 @@ function WebSocketProvider({ children }: { children: any }) {
   // Stored in [localStorage]
   const [userUUID, setUserUUID] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
+
+  const { getState: getProfileName } = useLocalState(
+    "pylos_profile_name",
+    (uuid: string) => `anon-${uuid.slice(0, 8)}`
+  );
+
+  const { getState: getUUID } = useLocalState("pylos_uuid");
+  const { getState: getAvatarUUID } = useLocalState("pylos_profile_avatar");
+
   useEffect(() => {
-    generateUserUUID(setUserUUID);
-    generateUserName(setUserName);
+    setUserUUID(getUUID());
+    setUserName(getProfileName());
   }, []);
 
   // Generated via server
@@ -83,7 +62,7 @@ function WebSocketProvider({ children }: { children: any }) {
     if (!userUUID) {
       return;
     }
-    registerClient(userName, userUUID, setClientUUID);
+    registerClient(userName, userUUID, getAvatarUUID(), setClientUUID);
     return () => {
       unregisterClient(clientUUID);
     };

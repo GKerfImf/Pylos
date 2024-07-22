@@ -5,6 +5,8 @@ import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "src/components/ui/card";
 import "src/styles.css";
 import { WebSocketContext } from "src/contexts/ws-context";
+import Avatar from "./avatar";
+import useLocalState from "src/hooks/local-storage";
 
 const ProfileTab: React.FC = () => {
   const { send } = useContext(WebSocketContext)!;
@@ -14,28 +16,18 @@ const ProfileTab: React.FC = () => {
     setName(e.target.value);
   };
 
-  const entryProfileName = "pylos_profile_name";
-
-  // TODO: turn into hook
-  const getProfileName = () => {
-    const entryID = "pylos_uuid";
-    if (!localStorage.getItem(entryID)) {
-      console.warn("[ProfileTab]: [pylos_uuid] does not exist");
-    }
-
-    if (!localStorage.getItem(entryProfileName)) {
-      return `anon-${localStorage.getItem(entryID)!.slice(0, 8)}`;
-    } else {
-      return localStorage.getItem(entryProfileName)!;
-    }
-  };
+  const { setState: setProfileNameLocal, getState: getProfileName } = useLocalState(
+    "pylos_profile_name",
+    (uuid: string) => `anon-${uuid.slice(0, 8)}`
+  );
+  const { getState: getAvatarState, setRandom: setRandomAvatar } = useLocalState("pylos_profile_avatar");
 
   const setProfileName = () => {
     if (name != null) {
-      localStorage.setItem(entryProfileName, name);
       send({
         ChangeName: {
-          new_user_name: name,
+          new_user_name: setProfileNameLocal(name),
+          new_user_avatar: getAvatarState(),
         },
       });
     }
@@ -56,6 +48,17 @@ const ProfileTab: React.FC = () => {
             </div>
           </div>
         </form>
+      </CardContent>
+      <CardContent>
+        <div className="grid w-full items-center gap-4">
+          <div className="flex flex-col space-y-1.5 text-white">
+            <Label htmlFor="name">Avatar</Label>
+            <Button onClick={setRandomAvatar} className="h-16">
+              <Avatar id={getAvatarState()} />
+              <p className="m-2">Change avatar</p>
+            </Button>
+          </div>
+        </div>
       </CardContent>
       <CardFooter className="flex justify-between">
         <Button onClick={setProfileName}>Save</Button>

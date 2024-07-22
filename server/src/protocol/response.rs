@@ -8,10 +8,11 @@ use crate::{
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Response {
-    ChangeName {
+    ChangeProfileInfo {
         status: u8, // TODO?: status u8 -> enum
-        user_name: String,
         client_uuid: UserUUID,
+        user_name: String,
+        user_avatar: String,
     },
 
     JoinGame {
@@ -22,7 +23,8 @@ pub enum Response {
     },
 
     GameParticipants {
-        participants: Vec<(String, ClientRole)>, // Vec<Client Name × Client Role>
+        // Vec<Client Name × Client Avatar UUID × Client Role>
+        participants: Vec<(String, String, ClientRole)>,
         game_uuid: GameUUID,
     },
 

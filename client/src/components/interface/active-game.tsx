@@ -8,10 +8,16 @@ import { TGameState, TGameParticipants } from "../../types/response";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
+import Avatar from "./avatar";
+import useLocalState from "src/hooks/local-storage";
 
 const ActiveGame: React.FC = () => {
   const [whitePlayer, setWhitePlayer] = useState<string | null>(null);
   const [blackPlayer, setBlackPlayer] = useState<string | null>(null);
+
+  const [whitePlayerAvatar, setWhitePlayerAvatar] = useState<string>("000");
+  const [blackPlayerAvatar, setBlackPlayerAvatar] = useState<string>("000");
+
   const [viewers, setViewers] = useState<string[]>([]);
 
   const [currentTurn, setCurrentTurn] = useState<Player | null>(null);
@@ -33,11 +39,14 @@ const ActiveGame: React.FC = () => {
       setViewers([]);
       req.GameParticipants.participants.map((participant) => {
         let name = participant[0];
-        let role = participant[1];
+        let avatar = participant[1];
+        let role = participant[2];
 
         if (role == "PlayerWhite") {
+          setWhitePlayerAvatar(avatar);
           setWhitePlayer(name);
         } else if (role == "PlayerBlack") {
+          setBlackPlayerAvatar(avatar);
           setBlackPlayer(name);
         } else {
           setViewers((val) => [...val, name]);
@@ -77,10 +86,6 @@ const ActiveGame: React.FC = () => {
         </div>
       );
     };
-    // hover:bg-opacity-75
-    const Avatar = () => {
-      return <div className="h-10 w-10 rounded-full bg-slate-300" />;
-    };
 
     const cardVariants = cva("rounded-sm items-center text-xs mb-1", {
       variants: {
@@ -108,7 +113,7 @@ const ActiveGame: React.FC = () => {
         )}
       >
         <Main />
-        <Avatar />
+        <Avatar id={color == "black" ? blackPlayerAvatar : whitePlayerAvatar} />
       </div>
     );
   };

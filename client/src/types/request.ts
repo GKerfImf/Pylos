@@ -4,6 +4,7 @@ type TRequest =
   | {
       ChangeName: {
         new_user_name: string;
+        new_user_avatar: string;
       };
     }
   | {

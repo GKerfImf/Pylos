@@ -7,7 +7,7 @@ use pylos::{
         ws::ws_handler,
     },
     state::{
-        client::{Client, Clients, UserUUID},
+        client::{Client, Clients},
         game::Games,
     },
 };
@@ -26,20 +26,18 @@ pub async fn health_handler() -> Result<impl Reply> {
 pub async fn register_handler(body: RegisterRequest, clients: Clients) -> Result<impl Reply> {
     info!("[register_handler]: {:?} ", body);
 
-    let user_name: String = body.user_name;
-    let user_uuid: UserUUID = body.user_uuid;
-
     clients.lock().await.insert(
-        user_uuid.clone(),
+        body.user_uuid.clone(),
         Client {
-            user_name,
-            user_uuid: user_uuid.clone(),
+            user_name: body.user_name,
+            user_uuid: body.user_uuid.clone(),
+            user_avatar_uuid: body.user_avatar_uuid,
             sender: None,
         },
     );
 
     Ok(json(&RegisterResponse {
-        url: format!("ws://127.0.0.1:8000/ws/{}", user_uuid),
+        url: format!("ws://127.0.0.1:8000/ws/{}", body.user_uuid),
     }))
 }
 

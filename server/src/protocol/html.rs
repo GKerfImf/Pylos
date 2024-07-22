@@ -4,6 +4,7 @@ use crate::state::client::UserUUID;
 pub struct RegisterRequest {
     pub user_name: String,
     pub user_uuid: UserUUID,
+    pub user_avatar_uuid: String,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
