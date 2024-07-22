@@ -26,8 +26,8 @@ export default function PylosCanvas() {
     <div className="w-full h-full">
       <Canvas shadows camera={{ position: [-8, 8, 0] }}>
         {/* <Perf /> */}
-        <Environment background preset="forest" blur={1} />
-        <ambientLight intensity={0.5} />
+        <Environment background preset="forest" backgroundBlurriness={1} />
+        <ambientLight intensity={0.9} />
         <Arena />
         {effects ? (
           <EffectComposer>
