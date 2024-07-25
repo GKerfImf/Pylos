@@ -5,7 +5,6 @@ import Rules from "src/components/interface/pylos-rules";
 import ProfileTab from "src/components/interface/profile-tab";
 import Play from "src/components/interface/play";
 import "src/styles.css";
-import Avatar from "boring-avatars";
 
 const Menu: React.FC = () => {
   return (
