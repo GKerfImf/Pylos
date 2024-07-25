@@ -107,13 +107,9 @@ function WebSocketProvider({ children }: { children: any }) {
       const req = Response.parse(JSON.parse(lastMessage.data)) as TResponse;
       const type_req = Object.keys(req)[0];
       if (type_req == undefined) {
-        console.log("Error parsing", JSON.parse(lastMessage.data));
+        console.error("Error parsing", JSON.parse(lastMessage.data));
       } else {
-        // toast({
-        //   title: type_req,
-        //   description: lastMessage.data.substring(0, 128) + " ...",
-        // });
-        console.log(type_req);
+        console.log(req);
       }
 
       if (channels.current.has(type_req)) {
