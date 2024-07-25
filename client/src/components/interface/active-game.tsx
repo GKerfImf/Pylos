@@ -18,8 +18,6 @@ const ActiveGame: React.FC = () => {
   const [whitePlayerAvatar, setWhitePlayerAvatar] = useState<string>("000");
   const [blackPlayerAvatar, setBlackPlayerAvatar] = useState<string>("000");
 
-  const [viewers, setViewers] = useState<string[]>([]);
-
   const [currentTurn, setCurrentTurn] = useState<Player | null>(null);
   const { subscribe, unsubscribe } = useContext(WebSocketContext)!;
 
@@ -35,23 +33,29 @@ const ActiveGame: React.FC = () => {
 
   //
   useEffect(() => {
+    const magic_constant_ai_uuid = "Min-Max AI";
     subscribe("GameParticipants", "ActiveGame", (req: TGameParticipants) => {
-      setViewers([]);
-      req.GameParticipants.participants.map((participant) => {
-        let name = participant[0];
-        let avatar = participant[1];
-        let role = participant[2];
-
-        if (role == "PlayerWhite") {
-          setWhitePlayerAvatar(avatar);
-          setWhitePlayer(name);
-        } else if (role == "PlayerBlack") {
-          setBlackPlayerAvatar(avatar);
-          setBlackPlayer(name);
+      if (req.GameParticipants.player_white != null) {
+        let pw = req.GameParticipants.player_white;
+        if (pw[2].player_type == "Human") {
+          setWhitePlayer(pw[0]);
+          setWhitePlayerAvatar(pw[1]);
         } else {
-          setViewers((val) => [...val, name]);
+          setWhitePlayer(magic_constant_ai_uuid);
+          setWhitePlayerAvatar(magic_constant_ai_uuid);
         }
-      });
+      }
+
+      if (req.GameParticipants.player_black != null) {
+        let pw = req.GameParticipants.player_black;
+        if (pw[2].player_type == "Human") {
+          setBlackPlayer(pw[0]);
+          setBlackPlayerAvatar(pw[1]);
+        } else {
+          setBlackPlayer(magic_constant_ai_uuid);
+          setBlackPlayerAvatar(magic_constant_ai_uuid);
+        }
+      }
     });
     return () => {
       unsubscribe("GameParticipants", "ActiveGame");

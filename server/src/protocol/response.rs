@@ -1,7 +1,8 @@
 use crate::{
     logic::board::BoardFrontend,
     state::{
-        client::{ClientRole, UserUUID},
+        client::UserUUID,
+        game::Player,
         game_description::{GameDescription, GameUUID},
     },
 };
@@ -9,35 +10,29 @@ use crate::{
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Response {
     ChangeProfileInfo {
-        status: u8, // TODO?: status u8 -> enum
-        client_uuid: UserUUID,
+        status: u8,            // TODO?: status u8 -> enum
+        client_uuid: UserUUID, // TODO: del?? use [old_user_name] instead?
         user_name: String,
         user_avatar: String,
     },
 
-    JoinGame {
-        status: u8, // TODO?: status u8 -> enum
-        client_uuid: UserUUID,
-        client_role: ClientRole,
+    CreateGame {
+        status: u8,
         game_uuid: GameUUID,
     },
 
     GameParticipants {
-        // Vec<Client Name × Client Avatar UUID × Client Role>
-        participants: Vec<(String, String, ClientRole)>,
         game_uuid: GameUUID,
-    },
-
-    CreateGame {
-        status: u8,
-        user_name: String,
-        game_uuid: GameUUID,
+        player_white: Option<(String, String, Player)>, // Name, AvatarUUID, Player
+        player_black: Option<(String, String, Player)>, // Name, AvatarUUID, Player
     },
 
     AvailableGames {
-        game_descriptions: Vec<GameDescription>,
+        available_games: Vec<(GameUUID, GameDescription)>,
     },
+
     GameState {
+        game_uuid: GameUUID,
         game_state: BoardFrontend,
     },
 }

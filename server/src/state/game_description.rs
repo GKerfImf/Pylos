@@ -2,8 +2,14 @@ use std::time::Duration;
 
 pub type GameUUID = String;
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
-pub enum SideSelection {
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq)]
+pub enum PlayerType {
+    Human = 0,
+    Computer = 1,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Copy)]
+pub enum ColorPreference {
     AlwaysWhite = 0,
     AlwaysBlack = 1,
     Random = 2,
@@ -17,8 +23,9 @@ pub struct TimeControl {
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct GameDescription {
-    pub game_uuid: Option<GameUUID>,
+    // TODO: GameConfiguration
     pub creator_name: String,
-    pub side_selection: SideSelection,
+    pub opponent: PlayerType,
+    pub side_selection: ColorPreference,
     pub time_control: Option<TimeControl>, // None if unlimited
 }

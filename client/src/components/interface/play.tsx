@@ -12,17 +12,17 @@ import { WebSocketContext } from "src/contexts/ws-context";
 import { TAvailableGames, TCreateGame } from "src/types/response";
 import { TRequest } from "src/types/request";
 
-const OpponentSelect: React.FC<{ opponent: any; setOpponent: any }> = ({ opponent, setOpponent }) => {
+const OpponentSelect: React.FC<{ opponent: "Human" | "Computer"; setOpponent: any }> = ({ opponent, setOpponent }) => {
   return (
     <div className="flex flex-col space-y-1.5">
       <Label htmlFor="opponent">Opponent</Label>
-      <Select onValueChange={setOpponent} defaultValue="computer" disabled={true}>
+      <Select onValueChange={setOpponent} defaultValue="Computer">
         <SelectTrigger id="opponent">
-          <SelectValue placeholder="Player" />
+          <SelectValue placeholder="Human" />
         </SelectTrigger>
         <SelectContent position="popper">
-          <SelectItem value="player">Player</SelectItem>
-          <SelectItem value="computer">Computer</SelectItem>
+          <SelectItem value="Human">Human</SelectItem>
+          <SelectItem value="Computer">Computer</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -88,7 +88,7 @@ const Increment: React.FC<{ increment: any; setIncrement: any }> = ({ increment,
 const CreateGameTab: React.FC = () => {
   const navigate = useNavigate();
 
-  const [opponent, setOpponent] = useState<"player" | "computer">("computer");
+  const [opponent, setOpponent] = useState<"Human" | "Computer">("Computer");
   const [side, setSide] = useState<"Random" | "AlwaysWhite" | "AlwaysBlack">("Random");
   const [timeControl, setTimeControl] = useState<"unlimited" | "real-time">("unlimited");
   const [time, setTime] = useState(5);
@@ -129,6 +129,7 @@ const CreateGameTab: React.FC = () => {
       CreateGame: {
         game_description: {
           game_uuid: null,
+          opponent: opponent,
           creator_name: getProfileName(),
           side_selection: side,
           time_control: time_control,
@@ -214,15 +215,17 @@ const JoinGameTab: React.FC = () => {
   useEffect(() => {
     subscribe("AvailableGames", "JoinGameTab", (req: TAvailableGames) => {
       setGames(
-        req.AvailableGames.game_descriptions.map((description: any, index: number) => {
+        req.AvailableGames.available_games.map((description: any, index: number) => {
+          const [game_uuid, game_spec] = description;
+
           let time =
-            description.time_control == null
+            game_spec.time_control == null
               ? "∞"
-              : (description.time_control.time.secs / 60).toFixed(0) + "+" + description.time_control.increment.secs;
+              : (game_spec.time_control.time.secs / 60).toFixed(0) + "+" + game_spec.time_control.increment.secs;
           return {
-            game_uuid: description.game_uuid,
-            user: description.creator_name,
-            side: description.side_selection,
+            game_uuid: game_uuid,
+            user: game_spec.creator_name,
+            side: game_spec.side_selection,
             time: time,
           };
         })
