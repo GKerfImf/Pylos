@@ -138,7 +138,7 @@ impl AI {
             (average_score, best_move)
         }
 
-        let fuel = 1_000_000;
+        let fuel = 2_000_000;
         let mut hash: HashMap<Board, (i32, Option<Move>)> = HashMap::new();
 
         let start = Instant::now();

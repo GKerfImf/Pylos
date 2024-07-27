@@ -44,9 +44,9 @@ pub struct Board {
     turn: PlayerSide,
     take_back: u8,
 
-    white_reserve: Vec<Vec<bool>>,
-    black_reserve: Vec<Vec<bool>>,
-    main_board: Vec<Vec<Vec<Option<PlayerSide>>>>,
+    white_reserve: Vec<bool>,
+    black_reserve: Vec<bool>,
+    main_board: Vec<Option<PlayerSide>>,
 
     winner: Option<PlayerSide>,
 }
@@ -58,9 +58,9 @@ impl Board {
             turn: PlayerSide::White,
             take_back: 0,
 
-            white_reserve: vec![vec![true; 3]; 5],
-            black_reserve: vec![vec![true; 3]; 5],
-            main_board: vec![vec![vec![None; 4]; 4]; 4],
+            white_reserve: vec![true; 5 * 3],
+            black_reserve: vec![true; 5 * 3],
+            main_board: vec![None; 4 * 4 * 4],
 
             winner: None,
         }
@@ -70,21 +70,21 @@ impl Board {
     fn get(&self, index: Index) -> Option<PlayerSide> {
         match index {
             Index { b: BoardSide::White, x, y, z: _ } => {
-                if self.white_reserve[x as usize][y as usize] {
+                if self.white_reserve[(x * 3 + y) as usize] {
                     Some(PlayerSide::White)
                 } else {
                     None
                 }
             }
             Index { b: BoardSide::Black, x, y, z: _ } => {
-                if self.black_reserve[x as usize][y as usize] {
+                if self.black_reserve[(x * 3 + y) as usize] {
                     Some(PlayerSide::Black)
                 } else {
                     None
                 }
             }
             Index { b: BoardSide::Center, x, y, z } => {
-                self.main_board[x as usize][y as usize][z as usize]
+                self.main_board[(x * 16 + y * 4 + z) as usize]
             }
         }
     }
@@ -106,13 +106,13 @@ impl Board {
         if self.ball_exists(ball) {
             match ball.index {
                 Index { b: BoardSide::White, x, y, z: _ } => {
-                    self.white_reserve[x as usize][y as usize] = false;
+                    self.white_reserve[(x * 3 + y) as usize] = false;
                 }
                 Index { b: BoardSide::Black, x, y, z: _ } => {
-                    self.black_reserve[x as usize][y as usize] = false;
+                    self.black_reserve[(x * 3 + y) as usize] = false;
                 }
                 Index { b: BoardSide::Center, x, y, z } => {
-                    self.main_board[x as usize][y as usize][z as usize] = None;
+                    self.main_board[(x * 16 + y * 4 + z) as usize] = None;
                 }
             }
             Ok(())
@@ -128,13 +128,13 @@ impl Board {
         } else {
             match ball.index {
                 Index { b: BoardSide::White, x, y, z: _ } => {
-                    self.white_reserve[x as usize][y as usize] = true;
+                    self.white_reserve[(x * 3 + y) as usize] = true;
                 }
                 Index { b: BoardSide::Black, x, y, z: _ } => {
-                    self.black_reserve[x as usize][y as usize] = true;
+                    self.black_reserve[(x * 3 + y) as usize] = true;
                 }
                 Index { b: BoardSide::Center, x, y, z } => {
-                    self.main_board[x as usize][y as usize][z as usize] = Some(ball.player);
+                    self.main_board[(x * 16 + y * 4 + z) as usize] = Some(ball.player);
                 }
             }
             Ok(())
