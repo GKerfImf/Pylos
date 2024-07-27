@@ -63,7 +63,7 @@ impl AI {
         self.board.clone()
     }
 
-    pub fn minmax_moves(&mut self) -> Board {
+    pub fn make_minmax_move(&mut self) -> Option<Board> {
         fn terminate_search(board: &Board) -> (i32, Option<Move>) {
             fn value(board: &Board) -> i32 {
                 board.number_of_balls_in_reserve(board.get_turn()) as i32
@@ -141,25 +141,22 @@ impl AI {
         let fuel = 1_000_000;
         let mut hash: HashMap<Board, (i32, Option<Move>)> = HashMap::new();
 
-        while self.board.get_turn() == self.side && !self.board.is_game_over() {
-            let start = Instant::now();
-            let (score, omove) = minmax(self.board.clone(), fuel, &mut hash);
-            let duration = start.elapsed();
+        let start = Instant::now();
+        let (score, omove) = minmax(self.board.clone(), fuel, &mut hash);
+        let duration = start.elapsed();
 
-            if omove.is_none() {
-                break;
-            }
-
+        if let Some(mv) = omove {
             info!(
                 "[minmax_moves, turn={:?}, mv={}, score={}, duration={:?}]",
                 self.board.get_turn(),
-                omove.unwrap().clone(),
+                mv,
                 score,
                 duration
             );
-            let _ = self.board.make_move(omove.unwrap());
+            let _ = self.board.make_move(mv);
+            Some(self.board.clone())
+        } else {
+            None
         }
-
-        self.board.clone()
     }
 }

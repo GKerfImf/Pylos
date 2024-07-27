@@ -1,12 +1,20 @@
-use rand::Rng;
-use std::{collections::HashMap, sync::Arc};
-use tokio::sync::Mutex;
-
 use super::{
-    client::UserUUID,
+    client::{Clients, UserUUID},
     game_description::{ColorPreference, GameDescription, GameUUID, PlayerType},
 };
-use crate::logic::{ai::AI, board::Board, player_side::PlayerSide};
+use crate::{
+    logic::{
+        ai::AI,
+        amove::Move,
+        board::{Board, BoardFrontend},
+        player_side::PlayerSide,
+    },
+    protocol::response::Response,
+};
+use rand::Rng;
+use std::{collections::HashMap, sync::Arc};
+use tokio::{spawn, sync::Mutex, task};
+use warp::filters::ws::Message;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub enum Role {
@@ -23,12 +31,13 @@ pub struct Player {
 #[derive(Debug, Clone)]
 pub struct Game {
     _creator_uuid: UserUUID,
-    _game_uuid: GameUUID,
+    game_uuid: GameUUID,
+    clients: Clients,
 
-    player_white: Option<(UserUUID, Player)>, 
-    player_black: Option<(UserUUID, Player)>, 
+    player_white: Option<(UserUUID, Player)>,
+    player_black: Option<(UserUUID, Player)>,
     spectators: Vec<UserUUID>,
-    board: Board,
+    board: Arc<Mutex<Board>>,
 
     game_description: GameDescription,
 }
@@ -39,14 +48,16 @@ impl Game {
         game_uuid: GameUUID,
         client_uuid: UserUUID,
         game_description: GameDescription,
+        clients: Clients,
     ) -> Game {
         Game {
             _creator_uuid: client_uuid,
-            _game_uuid: game_uuid,
+            game_uuid,
+            clients,
             player_white: None,
             player_black: None,
             spectators: vec![],
-            board: Board::new(),
+            board: Arc::new(Mutex::new(Board::new())),
 
             game_description,
         }
@@ -61,12 +72,8 @@ impl Game {
         (&self.player_white, &self.player_black)
     }
 
-    pub fn get_board(&self) -> &Board {
-        &self.board
-    }
-
-    pub fn mut_get_board(&mut self) -> &mut Board {
-        &mut self.board
+    pub async fn get_board(&self) -> Board {
+        self.board.lock().await.clone()
     }
 
     fn get_ai_color(&self) -> Option<PlayerSide> {
@@ -83,18 +90,63 @@ impl Game {
         None
     }
 
-    pub fn make_ai_move(&mut self) -> Board {
-        let mut ai = AI {
-            side: self.get_ai_color().expect("No AI found"),
-            board: self.get_board().clone(),
-        };
-
-        // TODO: make a move, not rewrite the board
-        self.board = ai.minmax_moves();
-        self.board.clone()
+    pub async fn opponent_type_turn(&self) -> Option<PlayerType> {
+        match self.board.lock().await.get_turn() {
+            PlayerSide::White => match self.player_white.clone() {
+                Some(player) => Some(player.1.player_type),
+                None => None,
+            },
+            PlayerSide::Black => match self.player_black.clone() {
+                Some(player) => Some(player.1.player_type),
+                None => None,
+            },
+        }
     }
 
-    fn add_player_helper(&mut self, client_uuid: &str, player: Player, color: ColorPreference) {
+    async fn ping_ai(&mut self) {
+        if let Some(PlayerType::Computer) = self.opponent_type_turn().await {
+            self.trigger_ai_move();
+        }
+    }
+
+    fn trigger_ai_move(&mut self) {
+        let ai_side = self.get_ai_color().expect("No AI found");
+        let game_uuid = self.game_uuid.clone();
+
+        let clients = Arc::clone(&self.clients);
+        let board_clone = Arc::clone(&self.board);
+
+        spawn(async move {
+            let mut board_guard = board_clone.lock().await;
+
+            while board_guard.get_turn() == ai_side && !board_guard.is_game_over() {
+                let mut ai = AI {
+                    side: ai_side,
+                    board: board_guard.clone(),
+                };
+                if let Some(new_board) = ai.make_minmax_move() {
+                    *board_guard = new_board;
+                } else {
+                    break;
+                }
+
+                let res: Response = Response::GameState {
+                    game_uuid: game_uuid.clone(),
+                    game_state: BoardFrontend::new(board_guard.clone()),
+                };
+
+                clients.lock().await.iter_mut().for_each(|(_, client)| {
+                    if let Some(sender) = &client.sender {
+                        let _ =
+                            sender.send(Ok(Message::text(serde_json::to_string(&res).unwrap())));
+                    }
+                });
+                task::yield_now().await;
+            }
+        });
+    }
+
+    fn add_with_color_pref(&mut self, client_uuid: &str, player: Player, color: ColorPreference) {
         match color {
             ColorPreference::AlwaysWhite => {
                 self.player_white = Some((client_uuid.to_string(), player));
@@ -112,10 +164,10 @@ impl Game {
         }
     }
 
-    fn add_player(&mut self, client_uuid: &str, player: Player) -> Result<(), &'static str> {
+    fn add_player(&mut self, client_uuid: &str, player: Player) {
         match (&self.player_white, &self.player_black) {
             (None, None) => {
-                self.add_player_helper(client_uuid, player, self.game_description.side_selection);
+                self.add_with_color_pref(client_uuid, player, self.game_description.side_selection);
                 if let PlayerType::Computer = self.game_description.opponent {
                     self.add_player(
                         client_uuid,
@@ -124,19 +176,17 @@ impl Game {
                             player_type: PlayerType::Computer,
                         },
                     )
-                } else {
-                    Ok(())
                 }
             }
             (None, Some(_)) => {
-                self.add_player_helper(client_uuid, player, ColorPreference::AlwaysWhite);
-                Ok(())
+                self.add_with_color_pref(client_uuid, player, ColorPreference::AlwaysWhite);
             }
             (Some(_), None) => {
-                self.add_player_helper(client_uuid, player, ColorPreference::AlwaysBlack);
-                Ok(())
+                self.add_with_color_pref(client_uuid, player, ColorPreference::AlwaysBlack);
             }
-            (Some(_), Some(_)) => Err(""),
+            (Some(_), Some(_)) => {
+                panic!("Trying to add a new player to a game with two players.");
+            }
         }
     }
 
@@ -145,32 +195,26 @@ impl Game {
         Ok(())
     }
 
-    pub fn add_client(&mut self, client_uuid: &str) -> Result<(), &'static str> {
+    pub async fn add_client(&mut self, client_uuid: &str) -> Result<(), &'static str> {
         let _ = self.add_spectator(client_uuid);
 
         if self.player_white.is_none() || self.player_black.is_none() {
-            let _ = self.add_player(
+            self.add_player(
                 client_uuid,
                 Player {
                     time_left: (),
                     player_type: PlayerType::Human,
                 },
             );
+            self.ping_ai().await;
         };
-
         Ok(())
     }
 
-    pub fn opponent_type_turn(&self) -> Option<PlayerType> {
-        match self.board.get_turn() {
-            PlayerSide::White => match self.player_white.clone() {
-                Some(player) => Some(player.1.player_type),
-                None => None,
-            },
-            PlayerSide::Black => match self.player_black.clone() {
-                Some(player) => Some(player.1.player_type),
-                None => None,
-            },
-        }
+    pub async fn make_move(&mut self, mv: Move) -> Result<(), &'static str> {
+        // TODO: validate [client_uuid] has rights to make a move
+        self.board.lock().await.make_move(mv)?;
+        self.ping_ai().await;
+        Ok(())
     }
 }
