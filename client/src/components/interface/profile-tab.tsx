@@ -3,10 +3,10 @@ import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "src/components/ui/card";
-import "src/styles.css";
 import { WebSocketContext } from "src/contexts/ws-context";
-import Avatar from "./avatar";
+import Avatar from "src/components/interface/avatar";
 import useLocalState from "src/hooks/local-storage";
+import "src/styles.css";
 
 const ProfileTab: React.FC = () => {
   const { send } = useContext(WebSocketContext)!;
@@ -54,7 +54,7 @@ const ProfileTab: React.FC = () => {
           <div className="flex flex-col space-y-1.5 text-white">
             <Label htmlFor="name">Avatar</Label>
             <Button onClick={setRandomAvatar} className="h-16">
-              <Avatar id={getAvatarState()} />
+              <Avatar id={getAvatarState()} winner={false} />
               <p className="m-2">Change avatar</p>
             </Button>
           </div>
