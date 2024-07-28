@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { WebSocketContext } from "../../contexts/ws-context";
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
 
 import Player from "../../types/player";
 import { cn } from "../../util/cn";
@@ -9,7 +9,6 @@ import { Badge } from "../../components/ui/badge";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import Avatar from "./avatar";
-import useLocalState from "src/hooks/local-storage";
 
 const ActiveGame: React.FC = () => {
   const [whitePlayer, setWhitePlayer] = useState<string | null>(null);
@@ -19,12 +18,17 @@ const ActiveGame: React.FC = () => {
   const [blackPlayerAvatar, setBlackPlayerAvatar] = useState<string>("000");
 
   const [currentTurn, setCurrentTurn] = useState<Player | null>(null);
+  const [winner, setWinner] = useState<Player | null>(null);
+
   const { subscribe, unsubscribe } = useContext(WebSocketContext)!;
 
   // Listen to the game state to know whose turn it is
   useEffect(() => {
     subscribe("GameState", "ActiveGame", (req: TGameState) => {
       setCurrentTurn(req.GameState.game_state.turn);
+      if (req.GameState.game_state.winner != null) {
+        setWinner(req.GameState.game_state.winner);
+      }
     });
     return () => {
       unsubscribe("GameState", "ActiveGame");
@@ -65,9 +69,10 @@ const ActiveGame: React.FC = () => {
   const PlayerCard: React.FC<{
     color: "white" | "black";
     state: "active" | "passive";
+    winner: boolean;
     connected: boolean;
     playerName: string;
-  }> = ({ playerName, color, state, connected }) => {
+  }> = ({ playerName, color, winner, state, connected }) => {
     const badgeVariants = cva("rounded-sm mr-1 px-2 items-center text-xs", {
       variants: {
         color: {
@@ -76,20 +81,6 @@ const ActiveGame: React.FC = () => {
         },
       },
     });
-
-    const Main = () => {
-      return (
-        <div className="flex-1 space-y-1">
-          <p className="text-sm font-bold leading-none">{playerName}</p>
-          <Badge variant="outline" className={cn(badgeVariants({ color }), "")}>
-            Time: 5:00
-          </Badge>
-          <Badge variant="outline" className={cn(badgeVariants({ color }), "")}>
-            Ping: 140ms
-          </Badge>
-        </div>
-      );
-    };
 
     const cardVariants = cva("rounded-sm items-center text-xs mb-1", {
       variants: {
@@ -109,6 +100,20 @@ const ActiveGame: React.FC = () => {
       },
     });
 
+    const Main = () => {
+      return (
+        <div className="flex-1 space-y-1">
+          <p className="text-sm font-bold leading-none">{playerName}</p>
+          <Badge variant="outline" className={cn(badgeVariants({ color }), "")}>
+            Time: 5:00
+          </Badge>
+          <Badge variant="outline" className={cn(badgeVariants({ color }), "")}>
+            Ping: 140ms
+          </Badge>
+        </div>
+      );
+    };
+
     return (
       <div
         className={cn(
@@ -117,29 +122,61 @@ const ActiveGame: React.FC = () => {
         )}
       >
         <Main />
-        <Avatar id={color == "black" ? blackPlayerAvatar : whitePlayerAvatar} />
+        <Avatar id={color == "black" ? blackPlayerAvatar : whitePlayerAvatar} winner={winner} />
       </div>
     );
   };
 
-  const WaitingWhitePlayer = () => {
-    return <PlayerCard playerName={"Waiting for opponent..."} color="white" state="passive" connected={false} />;
+  const WaitingWhitePlayer: React.FC = () => {
+    return (
+      <PlayerCard
+        playerName={"Waiting for opponent..."}
+        color="white"
+        state="passive"
+        connected={false}
+        winner={false}
+      />
+    );
   };
 
-  const WaitingBlackPlayer = () => {
-    return <PlayerCard playerName={"Waiting for opponent..."} color="black" state="passive" connected={false} />;
+  const WaitingBlackPlayer: React.FC = () => {
+    return (
+      <PlayerCard
+        playerName={"Waiting for opponent..."}
+        color="black"
+        state="passive"
+        connected={false}
+        winner={false}
+      />
+    );
   };
 
   const WhitePlayer: React.FC = () => {
     let state: "active" | "passive" =
       whitePlayer != null && blackPlayer != null && currentTurn == Player.White ? "active" : "passive";
-    return <PlayerCard playerName={whitePlayer!} color="white" state={state} connected={true} />;
+    return (
+      <PlayerCard
+        playerName={whitePlayer!}
+        color="white"
+        state={state}
+        connected={true}
+        winner={winner == Player.White}
+      />
+    );
   };
 
   const BlackPlayer: React.FC = () => {
     let state: "active" | "passive" =
       whitePlayer != null && blackPlayer != null && currentTurn == Player.Black ? "active" : "passive";
-    return <PlayerCard playerName={blackPlayer!} color="black" state={state} connected={true} />;
+    return (
+      <PlayerCard
+        playerName={blackPlayer!}
+        color="black"
+        state={state}
+        connected={true}
+        winner={winner == Player.Black}
+      />
+    );
   };
 
   const Controls = () => {
@@ -168,7 +205,6 @@ const ActiveGame: React.FC = () => {
             <HotKey value={"→"} />
           </Button>
         </div>
-
         <div className="inline-flex shadow-sm rounded-sm " role="group">
           <Button className={cn("rounded-r-none border", common)} disabled>
             Draw

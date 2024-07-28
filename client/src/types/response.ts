@@ -34,7 +34,17 @@ type TAvailableGames = z.infer<typeof AvailableGames>;
 const CreateGame = z.object({ CreateGame: z.any() });
 type TCreateGame = z.infer<typeof CreateGame>;
 
-const GameState = z.object({ GameState: z.object({ game_state: z.any() }) });
+const GameState = z.object({
+  GameState: z.object({
+    game_state: z.object({
+      balls: z.array(z.any()),
+      nmove: z.number(),
+      takeDownRule: z.number(),
+      turn: z.number(),
+      winner: z.union([z.null(), z.number()]),
+    }),
+  }),
+});
 type TGameState = z.infer<typeof GameState>;
 
 const Response = z.union([GameParticipants, AvailableGames, GameState, CreateGame]);
