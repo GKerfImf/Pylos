@@ -127,7 +127,7 @@ const CreateGameTab: React.FC = () => {
 
     const req: TRequest = {
       CreateGame: {
-        game_description: {
+        game_configuration: {
           game_uuid: null,
           opponent: opponent,
           creator_name: getProfileName(),

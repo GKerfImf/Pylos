@@ -4,7 +4,7 @@ use crate::{
     state::{
         client::{Client, Clients},
         game::{Game, Games},
-        game_description::{GameDescription, GameUUID},
+        game_configuration::{GameConfiguration, GameUUID},
     },
 };
 use futures::{FutureExt, StreamExt};
@@ -51,7 +51,7 @@ async fn change_profile_info(
 }
 
 async fn create_game(
-    game_description: GameDescription,
+    game_configuration: GameConfiguration,
     client_uuid: &str,
     clients: &Clients,
     games: &Games,
@@ -60,7 +60,7 @@ async fn create_game(
     let game = Game::new(
         game_uuid.clone(),
         client_uuid.to_string(),
-        game_description,
+        game_configuration,
         clients.clone(),
     );
 
@@ -79,7 +79,7 @@ async fn create_game(
 }
 
 async fn get_available_games(client_uuid: &str, clients: &Clients, games: &Games) {
-    let available_games: Vec<(GameUUID, GameDescription)> = games
+    let available_games: Vec<(GameUUID, GameConfiguration)> = games
         .lock()
         .await
         .iter_mut()
@@ -254,8 +254,8 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
             new_user_name,
             new_user_avatar,
         } => change_profile_info(new_user_name, new_user_avatar, client_uuid, clients).await,
-        Request::CreateGame { game_description } => {
-            create_game(game_description, client_uuid, clients, games).await;
+        Request::CreateGame { game_configuration } => {
+            create_game(game_configuration, client_uuid, clients, games).await;
         }
         Request::GetAvailableGames {} => get_available_games(client_uuid, clients, games).await,
         Request::JoinGame { game_uuid } => {

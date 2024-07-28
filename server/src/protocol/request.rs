@@ -1,6 +1,6 @@
 use crate::{
     logic::amove::Move,
-    state::game_description::{GameDescription, GameUUID},
+    state::game_configuration::{GameConfiguration, GameUUID},
 };
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
@@ -11,7 +11,7 @@ pub enum Request {
     },
 
     CreateGame {
-        game_description: GameDescription,
+        game_configuration: GameConfiguration,
     },
     JoinGame {
         game_uuid: GameUUID,

@@ -3,7 +3,7 @@ use crate::{
     state::{
         client::UserUUID,
         game::Player,
-        game_description::{GameDescription, GameUUID},
+        game_configuration::{GameConfiguration, GameUUID},
     },
 };
 
@@ -28,7 +28,7 @@ pub enum Response {
     },
 
     AvailableGames {
-        available_games: Vec<(GameUUID, GameDescription)>,
+        available_games: Vec<(GameUUID, GameConfiguration)>,
     },
 
     GameState {

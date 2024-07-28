@@ -22,8 +22,7 @@ pub struct TimeControl {
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
-pub struct GameDescription {
-    // TODO: GameConfiguration
+pub struct GameConfiguration {
     pub creator_name: String,
     pub opponent: PlayerType,
     pub side_selection: ColorPreference,

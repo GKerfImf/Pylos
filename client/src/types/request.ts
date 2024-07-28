@@ -14,7 +14,7 @@ type TRequest =
     }
   | {
       CreateGame: {
-        game_description: {
+        game_configuration: {
           game_uuid: string | null;
           opponent: "Human" | "Computer";
           creator_name: string;

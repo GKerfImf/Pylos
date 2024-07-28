@@ -1,6 +1,6 @@
 use super::{
     client::{Clients, UserUUID},
-    game_description::{ColorPreference, GameDescription, GameUUID, PlayerType},
+    game_configuration::{ColorPreference, GameConfiguration, GameUUID, PlayerType},
 };
 use crate::{
     logic::{
@@ -16,11 +16,6 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::{spawn, sync::Mutex, task};
 use warp::filters::ws::Message;
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
-pub enum Role {
-    Player = 0,
-    Spectator = 1,
-}
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct Player {
@@ -39,7 +34,7 @@ pub struct Game {
     spectators: Vec<UserUUID>,
     board: Arc<Mutex<Board>>,
 
-    game_description: GameDescription,
+    game_configuration: GameConfiguration,
 }
 pub type Games = Arc<Mutex<HashMap<GameUUID, Game>>>;
 
@@ -47,7 +42,7 @@ impl Game {
     pub fn new(
         game_uuid: GameUUID,
         client_uuid: UserUUID,
-        game_description: GameDescription,
+        game_configuration: GameConfiguration,
         clients: Clients,
     ) -> Game {
         Game {
@@ -59,12 +54,12 @@ impl Game {
             spectators: vec![],
             board: Arc::new(Mutex::new(Board::new())),
 
-            game_description,
+            game_configuration,
         }
     }
 
-    pub fn get_description(&self) -> &GameDescription {
-        &self.game_description
+    pub fn get_description(&self) -> &GameConfiguration {
+        &self.game_configuration
     }
 
     #[allow(clippy::type_complexity)]
@@ -167,8 +162,8 @@ impl Game {
     fn add_player(&mut self, client_uuid: &str, player: Player) {
         match (&self.player_white, &self.player_black) {
             (None, None) => {
-                self.add_with_color_pref(client_uuid, player, self.game_description.side_selection);
-                if let PlayerType::Computer = self.game_description.opponent {
+                self.add_with_color_pref(client_uuid, player, self.game_configuration.side_selection);
+                if let PlayerType::Computer = self.game_configuration.opponent {
                     self.add_player(
                         client_uuid,
                         Player {
