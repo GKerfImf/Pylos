@@ -2,21 +2,36 @@ import React, { useState } from "react";
 import { Outlines } from "@react-three/drei";
 import _ from "lodash";
 
-function Sphere({ id, onClick, color, isClicked, isClickable, ...props }) {
+function Sphere({
+  id,
+  onClick,
+  color,
+  isClicked,
+  isClickable,
+  position,
+  ...props
+}: {
+  id: any;
+  onClick: any;
+  color: any;
+  isClicked: any;
+  isClickable: any;
+  position: any;
+}) {
   console.debug("Render [Sphere]", id);
 
   const [hover, setHover] = useState(false);
 
   const scale = 0.5;
 
-  const onPointerOver = (e) => {
+  const onPointerOver = (e: any) => {
     e.stopPropagation();
     if (isClickable) {
       setHover(true);
     }
   };
 
-  const onPointerOut = (e) => {
+  const onPointerOut = (e: any) => {
     e.stopPropagation();
     if (isClickable) {
       setHover(false);
@@ -28,6 +43,7 @@ function Sphere({ id, onClick, color, isClicked, isClickable, ...props }) {
   return (
     <mesh
       {...props}
+      position={position}
       dispose={null}
       scale={scale}
       onPointerOver={onPointerOver}
@@ -47,19 +63,30 @@ function Sphere({ id, onClick, color, isClicked, isClickable, ...props }) {
   );
 }
 
-const GhostSphere = ({ id, onClick, color, ...props }) => {
+const GhostSphere = ({
+  id,
+  onClick,
+  color,
+  position,
+  ...props
+}: {
+  id: any;
+  onClick: any;
+  color: any;
+  position: any;
+}) => {
   console.debug("Render [GhostSphere]", id);
 
   const [hover, setHover] = useState(false);
 
   const scale = 0.5;
 
-  const onPointerOver = (e) => {
+  const onPointerOver = (e: any) => {
     e.stopPropagation();
     setHover(true);
   };
 
-  const onPointerOut = (e) => {
+  const onPointerOut = (e: any) => {
     e.stopPropagation();
     setHover(false);
   };
@@ -68,6 +95,7 @@ const GhostSphere = ({ id, onClick, color, ...props }) => {
     <mesh
       {...props}
       scale={scale}
+      position={position}
       dispose={null}
       onPointerOver={onPointerOver}
       onPointerOut={onPointerOut}
@@ -79,12 +107,12 @@ const GhostSphere = ({ id, onClick, color, ...props }) => {
   );
 };
 
-function BlackGhostSphere({ id, onClick, ...props }) {
-  return <GhostSphere id={id} onClick={onClick} color="black" {...props} />;
+function BlackGhostSphere({ id, onClick, position, ...props }: { id: any; onClick: any; position: any }) {
+  return <GhostSphere id={id} onClick={onClick} color="black" position={position} {...props} />;
 }
 
-function WhiteGhostSphere({ id, onClick, ...props }) {
-  return <GhostSphere id={id} onClick={onClick} color="white" {...props} />;
+function WhiteGhostSphere({ id, onClick, position, ...props }: { id: any; onClick: any; position: any }) {
+  return <GhostSphere id={id} onClick={onClick} color="white" position={position} {...props} />;
 }
 
 export { Sphere, BlackGhostSphere, WhiteGhostSphere, GhostSphere };

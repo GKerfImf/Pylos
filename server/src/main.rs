@@ -88,6 +88,10 @@ async fn main() {
         .and(with_games(games.clone()))
         .and_then(ws_handler);
 
+    let static_files = warp::path("static").and(warp::fs::dir("static"));
+    let models = warp::path("models").and(warp::fs::dir("static/models"));
+    let index = warp::path::end().and(warp::fs::file("static/index.html"));
+
     let cors = warp::cors()
         .allow_any_origin()
         .allow_credentials(true)
@@ -107,7 +111,13 @@ async fn main() {
         .max_age(30)
         .build();
 
-    let routes = health_route.or(users_routes).or(ws_route).with(cors);
+    let routes = health_route
+        .or(users_routes)
+        .or(ws_route)
+        .or(static_files)
+        .or(index)
+        .or(models)
+        .with(cors);
 
     warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
 }
