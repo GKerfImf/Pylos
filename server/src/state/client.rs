@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{mpsc, Mutex};
 use warp::filters::ws::Message;
 
-pub type UserUUID = String;
+use super::user_uuid::UserUUID;
 
 #[derive(Debug, Clone)]
 pub struct Client {

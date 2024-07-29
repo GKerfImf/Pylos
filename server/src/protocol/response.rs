@@ -1,9 +1,9 @@
 use crate::{
     logic::board::BoardFrontend,
     state::{
-        client::UserUUID,
         game::Player,
         game_configuration::{GameConfiguration, GameUUID},
+        user_uuid::UserUUID,
     },
 };
 

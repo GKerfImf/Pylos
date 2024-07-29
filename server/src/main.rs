@@ -9,6 +9,7 @@ use pylos::{
     state::{
         client::{Client, Clients},
         game::Games,
+        user_uuid::UserUUID,
     },
 };
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
@@ -43,7 +44,7 @@ pub async fn register_handler(body: RegisterRequest, clients: Clients) -> Result
 
 pub async fn unregister_handler(id: String, clients: Clients) -> Result<impl Reply> {
     info!("[unregister_handler]: {:?}", id);
-    clients.lock().await.remove(&id);
+    clients.lock().await.remove(&UserUUID::new(id).unwrap());
     Ok(StatusCode::OK)
 }
 

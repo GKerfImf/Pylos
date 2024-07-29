@@ -5,6 +5,7 @@ use crate::{
         client::{Client, Clients},
         game::{Game, Games},
         game_configuration::{GameConfiguration, GameUUID},
+        user_uuid::UserUUID,
     },
 };
 use futures::{FutureExt, StreamExt};
@@ -21,10 +22,10 @@ use warp::{
 async fn change_profile_info(
     new_user_name: String,
     new_user_avatar: String,
-    client_uuid: &str,
+    client_uuid: UserUUID,
     clients: &Clients,
 ) {
-    match clients.lock().await.get_mut(client_uuid) {
+    match clients.lock().await.get_mut(&client_uuid) {
         Some(client) => {
             client.user_name.clone_from(&new_user_name);
             client.user_avatar_uuid.clone_from(&new_user_avatar);
@@ -37,7 +38,7 @@ async fn change_profile_info(
 
     let res = Response::ChangeProfileInfo {
         status: 200,
-        client_uuid: client_uuid.to_string(),
+        client_uuid,
         user_name: new_user_name,
         user_avatar: new_user_avatar,
     };
@@ -52,14 +53,14 @@ async fn change_profile_info(
 
 async fn create_game(
     game_configuration: GameConfiguration,
-    client_uuid: &str,
+    client_uuid: UserUUID,
     clients: &Clients,
     games: &Games,
 ) {
     let game_uuid: String = Uuid::new_v4().simple().to_string();
     let game = Game::new(
         game_uuid.clone(),
-        client_uuid.to_string(),
+        client_uuid,
         game_configuration,
         clients.clone(),
     );
@@ -78,7 +79,7 @@ async fn create_game(
     });
 }
 
-async fn get_available_games(client_uuid: &str, clients: &Clients, games: &Games) {
+async fn get_available_games(client_uuid: &UserUUID, clients: &Clients, games: &Games) {
     let available_games: Vec<(GameUUID, GameConfiguration)> = games
         .lock()
         .await
@@ -100,7 +101,7 @@ async fn get_available_games(client_uuid: &str, clients: &Clients, games: &Games
         });
 }
 
-async fn join_game(client_uuid: &str, game_uuid: String, _clients: &Clients, games: &Games) {
+async fn join_game(client_uuid: UserUUID, game_uuid: String, _clients: &Clients, games: &Games) {
     let mut locked = games.lock().await;
     match locked.get_mut(&game_uuid) {
         Some(game) => {
@@ -202,7 +203,7 @@ async fn get_game_state(game_uuid: String, clients: &Clients, games: &Games) {
 async fn make_move(
     mv: Move,
     game_uuid: String,
-    _client_uuid: &str,
+    _client_uuid: &UserUUID,
     clients: &Clients,
     games: &Games,
 ) {
@@ -230,7 +231,7 @@ async fn make_move(
 }
 
 // TODO: use proper type for [client_uuid]
-async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, games: &Games) {
+async fn process_client_msg(client_uuid: UserUUID, msg: Message, clients: &Clients, games: &Games) {
     // Parse the message string into a `Request` enum.
     let req: Request = match msg.to_str() {
         Ok(message) => match from_str(message) {
@@ -257,7 +258,7 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
         Request::CreateGame { game_configuration } => {
             create_game(game_configuration, client_uuid, clients, games).await;
         }
-        Request::GetAvailableGames {} => get_available_games(client_uuid, clients, games).await,
+        Request::GetAvailableGames {} => get_available_games(&client_uuid, clients, games).await,
         Request::JoinGame { game_uuid } => {
             join_game(client_uuid, game_uuid.clone(), clients, games).await;
             emit_participants(game_uuid, clients, games).await;
@@ -266,14 +267,14 @@ async fn process_client_msg(client_uuid: &str, msg: Message, clients: &Clients, 
         }
         Request::GetGameState { game_uuid } => get_game_state(game_uuid, clients, games).await,
         Request::MakeMove { game_uuid, mv } => {
-            make_move(mv, game_uuid.clone(), client_uuid, clients, games).await;
+            make_move(mv, game_uuid.clone(), &client_uuid, clients, games).await;
         }
     };
 }
 
 async fn client_connection(
     ws: WebSocket,
-    client_uuid: String,
+    client_uuid: UserUUID,
     clients: Clients,
     games: Games,
     mut client: Client,
@@ -306,7 +307,7 @@ async fn client_connection(
                 break;
             }
         };
-        process_client_msg(&client_uuid, msg, &clients, &games).await;
+        process_client_msg(client_uuid.clone(), msg, &clients, &games).await;
     }
 
     clients.lock().await.remove(&client_uuid);
@@ -315,7 +316,7 @@ async fn client_connection(
 
 pub async fn ws_handler(
     ws: warp::ws::Ws,
-    client_uuid: String,
+    client_uuid: UserUUID,
     clients: Clients,
     games: Games,
 ) -> Result<impl Reply> {

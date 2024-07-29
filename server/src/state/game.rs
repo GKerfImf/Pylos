@@ -1,6 +1,7 @@
 use super::{
-    client::{Clients, UserUUID},
+    client::Clients,
     game_configuration::{ColorPreference, GameConfiguration, GameUUID, PlayerType},
+    user_uuid::UserUUID,
 };
 use crate::{
     logic::{
@@ -15,7 +16,6 @@ use rand::Rng;
 use std::{collections::HashMap, sync::Arc};
 use tokio::{spawn, sync::Mutex, task};
 use warp::filters::ws::Message;
-
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct Player {
@@ -141,28 +141,37 @@ impl Game {
         });
     }
 
-    fn add_with_color_pref(&mut self, client_uuid: &str, player: Player, color: ColorPreference) {
+    fn add_with_color_pref(
+        &mut self,
+        client_uuid: UserUUID,
+        player: Player,
+        color: ColorPreference,
+    ) {
         match color {
             ColorPreference::AlwaysWhite => {
-                self.player_white = Some((client_uuid.to_string(), player));
+                self.player_white = Some((client_uuid, player));
             }
             ColorPreference::AlwaysBlack => {
-                self.player_black = Some((client_uuid.to_string(), player));
+                self.player_black = Some((client_uuid, player));
             }
             ColorPreference::Random => {
                 if rand::thread_rng().gen() {
-                    self.player_white = Some((client_uuid.to_string(), player));
+                    self.player_white = Some((client_uuid, player));
                 } else {
-                    self.player_black = Some((client_uuid.to_string(), player));
+                    self.player_black = Some((client_uuid, player));
                 }
             }
         }
     }
 
-    fn add_player(&mut self, client_uuid: &str, player: Player) {
+    fn add_player(&mut self, client_uuid: UserUUID, player: Player) {
         match (&self.player_white, &self.player_black) {
             (None, None) => {
-                self.add_with_color_pref(client_uuid, player, self.game_configuration.side_selection);
+                self.add_with_color_pref(
+                    client_uuid.clone(),
+                    player,
+                    self.game_configuration.side_selection,
+                );
                 if let PlayerType::Computer = self.game_configuration.opponent {
                     self.add_player(
                         client_uuid,
@@ -185,13 +194,13 @@ impl Game {
         }
     }
 
-    fn add_spectator(&mut self, client_uuid: &str) -> Result<(), &'static str> {
-        self.spectators.push(client_uuid.to_string());
+    fn add_spectator(&mut self, client_uuid: UserUUID) -> Result<(), &'static str> {
+        self.spectators.push(client_uuid);
         Ok(())
     }
 
-    pub async fn add_client(&mut self, client_uuid: &str) -> Result<(), &'static str> {
-        let _ = self.add_spectator(client_uuid);
+    pub async fn add_client(&mut self, client_uuid: UserUUID) -> Result<(), &'static str> {
+        let _ = self.add_spectator(client_uuid.clone());
 
         if self.player_white.is_none() || self.player_black.is_none() {
             self.add_player(
