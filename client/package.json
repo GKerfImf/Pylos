@@ -25,6 +25,7 @@
     "@react-three/drei": "^9.108.4",
     "@react-three/fiber": "8.15.13",
     "@react-three/postprocessing": "^2.15.12",
+    "@uidotdev/usehooks": "^2.4.1",
     "boring-avatars": "^1.10.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",

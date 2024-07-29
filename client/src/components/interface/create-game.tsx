@@ -1,20 +1,27 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLocalStorage } from "@uidotdev/usehooks";
 import { Label } from "src/components/ui/label";
 import { Slider } from "src/components/ui/slider";
 import { Button } from "src/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "src/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
-import { WebSocketContext } from "src/contexts/ws-context";
-import { TCreateGame } from "src/types/response";
 import { TRequest } from "src/types/request";
+import { TCreateGame } from "src/types/response";
+import { WebSocketContext } from "src/contexts/ws-context";
 import "src/styles.css";
 
-const OpponentSelect: React.FC<{ opponent: "Human" | "Computer"; setOpponent: any }> = ({ opponent, setOpponent }) => {
+const OpponentSelect: React.FC<{ setOpponent: (opp: "Human" | "Computer") => void }> = ({ setOpponent }) => {
+  const [opponent, saveOpponent] = useLocalStorage<"Human" | "Computer">("PylosOpponentSelect", "Computer");
+  const onValueChange = (value: "Human" | "Computer") => {
+    saveOpponent(value);
+    setOpponent(value);
+  };
+
   return (
     <div className="flex flex-col space-y-1.5">
       <Label htmlFor="opponent">Opponent</Label>
-      <Select onValueChange={setOpponent} defaultValue="Computer">
+      <Select onValueChange={onValueChange} defaultValue={opponent}>
         <SelectTrigger id="opponent">
           <SelectValue placeholder="Human" />
         </SelectTrigger>
@@ -28,13 +35,18 @@ const OpponentSelect: React.FC<{ opponent: "Human" | "Computer"; setOpponent: an
 };
 
 const SideSelect: React.FC<{
-  side: "Random" | "AlwaysWhite" | "AlwaysBlack";
   setSide: (newSide: "Random" | "AlwaysWhite" | "AlwaysBlack") => void;
-}> = ({ side, setSide }) => {
+}> = ({ setSide }) => {
+  const [side, saveSide] = useLocalStorage<"Random" | "AlwaysWhite" | "AlwaysBlack">("PylosSideSelect", "Random");
+  const onValueChange = (value: "Random" | "AlwaysWhite" | "AlwaysBlack") => {
+    saveSide(value);
+    setSide(value);
+  };
+
   return (
     <div className="flex flex-col space-y-1.5">
       <Label htmlFor="side">Side</Label>
-      <Select onValueChange={setSide} defaultValue="Random">
+      <Select onValueChange={onValueChange} defaultValue={side}>
         <SelectTrigger id="side">
           <SelectValue placeholder="Random" />
         </SelectTrigger>
@@ -145,8 +157,8 @@ const CreateGameTab: React.FC = () => {
       </CardHeader>
 
       <CardContent className="space-y-2">
-        <OpponentSelect opponent={opponent} setOpponent={setOpponent} />
-        <SideSelect side={side} setSide={setSide} />
+        <OpponentSelect setOpponent={setOpponent} />
+        <SideSelect setSide={setSide} />
         <TimeControlSelect timeControl={timeControl} setTimeControl={setTimeControl} />
         {timeControl == "real-time" ? (
           <div>
