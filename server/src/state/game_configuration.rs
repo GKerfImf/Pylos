@@ -1,7 +1,5 @@
 use std::time::Duration;
 
-pub type GameUUID = String;
-
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq)]
 pub enum PlayerType {
     Human = 0,

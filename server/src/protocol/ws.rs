@@ -4,11 +4,13 @@ use crate::{
     state::{
         client::{Client, Clients},
         game::{Game, Games},
-        game_configuration::{GameConfiguration, GameUUID},
+        game_configuration::GameConfiguration,
+        game_meta::GameMeta,
+        game_uuid::GameUUID,
         user_uuid::UserUUID,
     },
 };
-use futures::{FutureExt, StreamExt};
+use futures::{future::join_all, FutureExt, StreamExt};
 use log::{error, info, warn};
 use serde_json::from_str;
 use tokio::sync::mpsc;
@@ -80,12 +82,20 @@ async fn create_game(
 }
 
 async fn get_available_games(client_uuid: &UserUUID, clients: &Clients, games: &Games) {
-    let available_games: Vec<(GameUUID, GameConfiguration)> = games
-        .lock()
-        .await
-        .iter_mut()
-        .map(|(game_uuid, game)| (game_uuid.clone(), game.get_description().clone()))
-        .collect();
+    let available_games: Vec<(GameUUID, GameMeta, GameConfiguration)> = {
+        let games_guard = games.lock().await;
+        let futures = games_guard.iter().map(|(game_uuid, game)| {
+            let game_uuid = game_uuid.clone();
+            let game_meta_future = game.get_meta();
+            let game_description = game.get_description().clone();
+
+            async move {
+                let game_meta = game_meta_future.await;
+                (game_uuid, game_meta, game_description)
+            }
+        });
+        join_all(futures).await
+    };
 
     let res = Response::AvailableGames { available_games };
 

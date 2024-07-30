@@ -1,0 +1,1 @@
+pub type GameUUID = String;

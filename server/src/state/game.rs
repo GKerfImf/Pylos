@@ -1,6 +1,8 @@
 use super::{
     client::Clients,
-    game_configuration::{ColorPreference, GameConfiguration, GameUUID, PlayerType},
+    game_configuration::{ColorPreference, GameConfiguration, PlayerType},
+    game_meta::GameMeta,
+    game_uuid::GameUUID,
     user_uuid::UserUUID,
 };
 use crate::{
@@ -23,6 +25,22 @@ pub struct Player {
     player_type: PlayerType,
 }
 
+impl Player {
+    pub fn new_computer() -> Self {
+        Player {
+            time_left: (),
+            player_type: PlayerType::Computer,
+        }
+    }
+
+    pub fn new_human() -> Self {
+        Player {
+            time_left: (),
+            player_type: PlayerType::Human,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Game {
     _creator_uuid: UserUUID,
@@ -34,6 +52,7 @@ pub struct Game {
     spectators: Vec<UserUUID>,
     board: Arc<Mutex<Board>>,
 
+    game_meta: Arc<Mutex<GameMeta>>, // Any change to the board updates the game's metadata, hence [Mutex]
     game_configuration: GameConfiguration,
 }
 pub type Games = Arc<Mutex<HashMap<GameUUID, Game>>>;
@@ -49,13 +68,19 @@ impl Game {
             _creator_uuid: client_uuid,
             game_uuid,
             clients,
+
             player_white: None,
             player_black: None,
             spectators: vec![],
             board: Arc::new(Mutex::new(Board::new())),
 
+            game_meta: Arc::new(Mutex::new(GameMeta::new_pending())),
             game_configuration,
         }
+    }
+
+    pub async fn get_meta(&self) -> GameMeta {
+        self.game_meta.lock().await.clone()
     }
 
     pub fn get_description(&self) -> &GameConfiguration {
@@ -110,6 +135,7 @@ impl Game {
 
         let clients = Arc::clone(&self.clients);
         let board_clone = Arc::clone(&self.board);
+        let game_meta = Arc::clone(&self.game_meta);
 
         spawn(async move {
             let mut board_guard = board_clone.lock().await;
@@ -137,6 +163,12 @@ impl Game {
                     }
                 });
                 task::yield_now().await;
+            }
+
+            let mut meta_guard = game_meta.lock().await;
+            meta_guard.update_last_move_at();
+            if board_guard.is_game_over() {
+                meta_guard.promote_to_completed();
             }
         });
     }
@@ -173,13 +205,7 @@ impl Game {
                     self.game_configuration.side_selection,
                 );
                 if let PlayerType::Computer = self.game_configuration.opponent {
-                    self.add_player(
-                        client_uuid,
-                        Player {
-                            time_left: (),
-                            player_type: PlayerType::Computer,
-                        },
-                    )
+                    self.add_player(client_uuid, Player::new_computer());
                 }
             }
             (None, Some(_)) => {
@@ -191,34 +217,42 @@ impl Game {
             (Some(_), Some(_)) => {
                 panic!("Trying to add a new player to a game with two players.");
             }
-        }
+        };
     }
 
-    fn add_spectator(&mut self, client_uuid: UserUUID) -> Result<(), &'static str> {
-        self.spectators.push(client_uuid);
-        Ok(())
+    fn add_spectator(&mut self, client_uuid: UserUUID) {
+        self.spectators.push(client_uuid)
     }
 
     pub async fn add_client(&mut self, client_uuid: UserUUID) -> Result<(), &'static str> {
-        let _ = self.add_spectator(client_uuid.clone());
+        self.add_spectator(client_uuid.clone());
 
         if self.player_white.is_none() || self.player_black.is_none() {
-            self.add_player(
-                client_uuid,
-                Player {
-                    time_left: (),
-                    player_type: PlayerType::Human,
-                },
-            );
+            self.add_player(client_uuid, Player::new_human());
+
+            if self.player_white.is_some() && self.player_black.is_some() {
+                self.game_meta.lock().await.promote_to_in_progress();
+            };
+
             self.ping_ai().await;
         };
+
         Ok(())
     }
 
     pub async fn make_move(&mut self, mv: Move) -> Result<(), &'static str> {
         // TODO: validate [client_uuid] has rights to make a move
+
+        // Execute the move on the board and update the game's meta
         self.board.lock().await.make_move(mv)?;
+        self.game_meta.lock().await.update_last_move_at();
+        if self.board.lock().await.is_game_over() {
+            self.game_meta.lock().await.promote_to_completed();
+        }
+
+        // AI updates the game's meta, if needed
         self.ping_ai().await;
+
         Ok(())
     }
 }

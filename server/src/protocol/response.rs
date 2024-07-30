@@ -1,9 +1,8 @@
 use crate::{
     logic::board::BoardFrontend,
     state::{
-        game::Player,
-        game_configuration::{GameConfiguration, GameUUID},
-        user_uuid::UserUUID,
+        game::Player, game_configuration::GameConfiguration, game_meta::GameMeta,
+        game_uuid::GameUUID, user_uuid::UserUUID,
     },
 };
 
@@ -11,7 +10,7 @@ use crate::{
 pub enum Response {
     ChangeProfileInfo {
         status: u8,            // TODO?: status u8 -> enum
-        client_uuid: UserUUID, // TODO: del?? use [old_user_name] instead?
+        client_uuid: UserUUID, // TODO??: use [old_user_name] instead?
         user_name: String,
         user_avatar: String,
     },
@@ -28,7 +27,7 @@ pub enum Response {
     },
 
     AvailableGames {
-        available_games: Vec<(GameUUID, GameConfiguration)>,
+        available_games: Vec<(GameUUID, GameMeta, GameConfiguration)>,
     },
 
     GameState {

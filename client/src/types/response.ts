@@ -14,6 +14,7 @@ const AvailableGames = z.object({
     available_games: z.array(
       z.tuple([
         z.string(),
+        z.object({ status: z.string(), created_at: z.any(), last_move_at: z.any() }),
         z.object({
           creator_name: z.string(),
           side_selection: z.string(),

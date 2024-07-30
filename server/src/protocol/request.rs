@@ -1,6 +1,6 @@
 use crate::{
     logic::amove::Move,
-    state::game_configuration::{GameConfiguration, GameUUID},
+    state::{game_configuration::GameConfiguration, game_uuid::GameUUID},
 };
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
