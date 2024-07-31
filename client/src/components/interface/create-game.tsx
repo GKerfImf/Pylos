@@ -13,6 +13,10 @@ import "src/styles.css";
 
 const OpponentSelect: React.FC<{ setOpponent: (opp: "Human" | "Computer") => void }> = ({ setOpponent }) => {
   const [opponent, saveOpponent] = useLocalStorage<"Human" | "Computer">("PylosOpponentSelect", "Computer");
+  useEffect(() => {
+    setOpponent(opponent);
+  }, []);
+
   const onValueChange = (value: "Human" | "Computer") => {
     saveOpponent(value);
     setOpponent(value);
@@ -38,6 +42,10 @@ const SideSelect: React.FC<{
   setSide: (newSide: "Random" | "AlwaysWhite" | "AlwaysBlack") => void;
 }> = ({ setSide }) => {
   const [side, saveSide] = useLocalStorage<"Random" | "AlwaysWhite" | "AlwaysBlack">("PylosSideSelect", "Random");
+  useEffect(() => {
+    setSide(side);
+  }, []);
+
   const onValueChange = (value: "Random" | "AlwaysWhite" | "AlwaysBlack") => {
     saveSide(value);
     setSide(value);
