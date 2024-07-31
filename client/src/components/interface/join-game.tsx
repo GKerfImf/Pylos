@@ -89,6 +89,7 @@ const PendingGames: React.FC<{ games: TGame[] }> = ({ games }) => {
         <CardTitle>Join a game</CardTitle>
       </CardHeader>
       <AvailableGames games={games.filter((data) => data.status == "Pending")} />
+      <CardFooter className="pb-0" />
     </Card>
   );
 };
@@ -106,6 +107,7 @@ const InProgressGames: React.FC<{ games: TGame[] }> = ({ games }) => {
         <CardTitle>Watch a game</CardTitle>
       </CardHeader>
       <AvailableGames games={gamesInProgress} />
+      <CardFooter className="pb-0" />
     </Card>
   );
 };
@@ -123,6 +125,7 @@ const CompletedGames: React.FC<{ games: TGame[] }> = ({ games }) => {
         <CardTitle>Review a game</CardTitle>
       </CardHeader>
       <AvailableGames games={completedFames} />
+      <CardFooter className="pb-0" />
     </Card>
   );
 };
