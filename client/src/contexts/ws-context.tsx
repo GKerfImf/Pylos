@@ -4,13 +4,16 @@ import { TRequest } from "src/types/request";
 import { Response, TResponse } from "src/types/response";
 import useLocalState from "src/hooks/local-storage";
 
+// const url = window.location.host;
+const url = "localhost:8000";
+
 const registerClient = async (
   userName: String,
   userUUID: string,
   userAvatar: string,
   callback: (_: string) => void
 ) => {
-  const response = await fetch(`http://localhost:8000/clients/`, {
+  const response = await fetch(`http://${url}/clients/`, {
     method: "POST",
     body: JSON.stringify({ user_name: userName, user_uuid: userUUID, user_avatar_uuid: userAvatar }),
     credentials: "include",
@@ -22,7 +25,7 @@ const registerClient = async (
 };
 
 const unregisterClient = async (userUUID: string) => {
-  const response = await fetch(`http://localhost:8000/clients/${userUUID}`, {
+  const response = await fetch(`http://${url}/clients/${userUUID}`, {
     method: "DELETE",
     credentials: "include",
     headers: {
@@ -69,13 +72,13 @@ function WebSocketProvider({ children }: { children: any }) {
   }, [userUUID]);
 
   // Setup the socket connection
-  const [socketUrl, setSocketUrl] = useState("ws://127.0.0.1:8000/ws/");
+  const [socketUrl, setSocketUrl] = useState(`ws://${url}/ws/`);
   useEffect(() => {
     if (clientUUID == "") {
       return;
     }
     console.debug("[useEffect, setSocketUrl]");
-    setSocketUrl(`ws://127.0.0.1:8000/ws/${clientUUID}`);
+    setSocketUrl(`ws://${url}/ws/${clientUUID}`);
   }, [userUUID, clientUUID]);
 
   const { sendMessage, lastMessage } = useWebSocket<string>(socketUrl);

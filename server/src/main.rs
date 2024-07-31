@@ -38,7 +38,7 @@ pub async fn register_handler(body: RegisterRequest, clients: Clients) -> Result
     );
 
     Ok(json(&RegisterResponse {
-        url: format!("ws://127.0.0.1:8000/ws/{}", body.user_uuid),
+        url: body.user_uuid.to_string(),
     }))
 }
 
@@ -119,5 +119,5 @@ async fn main() {
         .or(models)
         .with(cors);
 
-    warp::serve(routes).run(([127, 0, 0, 1], 8000)).await;
+    warp::serve(routes).run(([0, 0, 0, 0], 8000)).await;
 }
