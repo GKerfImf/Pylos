@@ -52,11 +52,11 @@ const Header: React.FC = () => {
   );
 };
 
-const Row: React.FC<{ data: TGame; key: number }> = ({ data, key }) => {
+const Row: React.FC<{ data: TGame }> = ({ data }) => {
   const navigate = useNavigate();
 
   return (
-    <TableRow onClick={() => navigate(`/games/${data.game_uuid}`)} key={key}>
+    <TableRow onClick={() => navigate(`/games/${data.game_uuid}`)}>
       <TableCell>
         <ColorIcon color={data.side} />
       </TableCell>
