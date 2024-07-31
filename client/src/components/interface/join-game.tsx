@@ -74,8 +74,8 @@ const AvailableGames: React.FC<{ games: TGame[] }> = ({ games }) => {
         {games.length > 0 ? games.map((data, index) => <Row data={data} key={index} />) : null}
       </TableBody>
       {games.length == 0 ? (
-        <TableCaption className="px-8 py-2">
-          There are no available games. You can create one by going to the 'Create' tab.
+        <TableCaption className="px-2 py-2">
+          There are currently no games waiting for players to join. You can create one by going to the 'Create' tab.
         </TableCaption>
       ) : null}
     </Table>
