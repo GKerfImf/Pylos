@@ -40,7 +40,7 @@ const PlayerCard: React.FC<{
       },
       connected: {
         true: "",
-        false: "blur-sm hover:brightness-100",
+        false: "hover:brightness-100 animate-pulse",
       },
     },
   });
@@ -64,7 +64,7 @@ const PlayerCard: React.FC<{
       className={cn(cardVariants({ color, state, connected }), "flex space-x-4 rounded-md p-2 border-2 cursor-default")}
     >
       <Main />
-      <Avatar id={avatarID} winner={winner} />
+      {connected ? <Avatar id={avatarID} winner={winner} /> : null}
     </div>
   );
 };
@@ -72,8 +72,8 @@ const PlayerCard: React.FC<{
 const WaitingWhitePlayer: React.FC = () => {
   return (
     <PlayerCard
-      playerName={"Waiting for opponent..."}
-      avatarID={"magic-constant"}
+      playerName={"Waiting for a player to join..."}
+      avatarID={""}
       color="white"
       state="passive"
       connected={false}
@@ -85,8 +85,8 @@ const WaitingWhitePlayer: React.FC = () => {
 const WaitingBlackPlayer: React.FC = () => {
   return (
     <PlayerCard
-      playerName={"Waiting for opponent..."}
-      avatarID={"magic-constant"}
+      playerName={"Waiting for a player to join..."}
+      avatarID={""}
       color="black"
       state="passive"
       connected={false}
