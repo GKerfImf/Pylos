@@ -26,7 +26,6 @@ export default function App() {
           <div className="absolute right-0 top-0">
             <ActiveGame />
           </div>
-          <Toaster />
         </div>
       ),
     },

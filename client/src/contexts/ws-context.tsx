@@ -1,8 +1,10 @@
+import { useLocalStorage } from "@uidotdev/usehooks";
 import React, { createContext, useEffect, useRef, useState } from "react";
 import useWebSocket from "react-use-websocket";
 import { TRequest } from "src/types/request";
 import { Response, TResponse } from "src/types/response";
-import useLocalState from "src/hooks/local-storage";
+import generateDefaultName from "src/util/default-names";
+import createUUID from "src/util/uuid";
 
 // const url = window.location.host;
 const url = "localhost:8000";
@@ -42,22 +44,9 @@ type WebSocketContextProps = {
 
 const WebSocketContext = createContext<WebSocketContextProps | null>(null);
 function WebSocketProvider({ children }: { children: any }) {
-  // Stored in [localStorage]
-  const [userUUID, setUserUUID] = useState<string>("");
-  const [userName, setUserName] = useState<string>("");
-
-  const { getState: getProfileName } = useLocalState(
-    "pylos_profile_name",
-    (uuid: string) => `anon-${uuid.slice(0, 8)}`
-  );
-
-  const { getState: getUUID } = useLocalState("pylos_uuid");
-  const { getState: getAvatarUUID } = useLocalState("pylos_profile_avatar");
-
-  useEffect(() => {
-    setUserUUID(getUUID());
-    setUserName(getProfileName());
-  }, []);
+  const [nameLocal] = useLocalStorage<string>("PylosProfileName", generateDefaultName());
+  const [userUUID] = useLocalStorage<string>("PylosProfileUUID", createUUID());
+  const [avatarLocal] = useLocalStorage<string>("PylosProfileAvatar", createUUID());
 
   // Generated via server
   const [clientUUID, setClientUUID] = useState<string>("");
@@ -65,7 +54,7 @@ function WebSocketProvider({ children }: { children: any }) {
     if (!userUUID) {
       return;
     }
-    registerClient(userName, userUUID, getAvatarUUID(), setClientUUID);
+    registerClient(nameLocal, userUUID, avatarLocal, setClientUUID);
     return () => {
       unregisterClient(clientUUID);
     };

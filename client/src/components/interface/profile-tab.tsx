@@ -1,37 +1,49 @@
-import React, { ChangeEvent, useContext, useState } from "react";
+import React, { ChangeEvent, useContext, useEffect, useState } from "react";
+import { useLocalStorage } from "@uidotdev/usehooks";
+import { WebSocketContext } from "src/contexts/ws-context";
+import { TChangeProfileInfo } from "src/types/response";
+import createUUID from "src/util/uuid";
+import generateDefaultName from "src/util/default-names";
 import { Input } from "src/components/ui/input";
 import { Label } from "src/components/ui/label";
 import { Button } from "src/components/ui/button";
+import { toast } from "src/components/ui/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "src/components/ui/card";
-import { WebSocketContext } from "src/contexts/ws-context";
 import Avatar from "src/components/interface/avatar";
-import useLocalState from "src/hooks/local-storage";
 import "src/styles.css";
 
 const ProfileTab: React.FC = () => {
-  const { send } = useContext(WebSocketContext)!;
+  const { send, subscribe, unsubscribe } = useContext(WebSocketContext)!;
 
-  const [name, setName] = useState<string | null>(null);
+  const [nameLocal, saveNameLocal] = useLocalStorage<string>("PylosProfileName", generateDefaultName());
+  const [avatarLocal, saveAvatarLocal] = useLocalStorage<string>("PylosProfileAvatar", createUUID());
+
+  const [name, setName] = useState<string>(nameLocal);
   const onInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
   };
 
-  const { setState: setProfileNameLocal, getState: getProfileName } = useLocalState(
-    "pylos_profile_name",
-    (uuid: string) => `anon-${uuid.slice(0, 8)}`
-  );
-  const { getState: getAvatarState, setRandom: setRandomAvatar } = useLocalState("pylos_profile_avatar");
-
   const setProfileName = () => {
-    if (name != null) {
-      send({
-        ChangeName: {
-          new_user_name: setProfileNameLocal(name),
-          new_user_avatar: getAvatarState(),
-        },
-      });
-    }
+    saveNameLocal(name);
+    send({
+      ChangeProfileInfo: {
+        new_user_name: name,
+        new_user_avatar: avatarLocal,
+      },
+    });
   };
+
+  useEffect(() => {
+    subscribe("ChangeProfileInfo", "ProfileTab", (_req: TChangeProfileInfo) => {
+      toast({
+        title: "Success! Profile info has been changed.",
+        description: "You may need to refresh the page to see the changes.",
+      });
+    });
+    return () => {
+      unsubscribe("ChangeProfileInfo", "ProfileTab");
+    };
+  }, []);
 
   return (
     <Card className="w-full ">
@@ -44,7 +56,7 @@ const ProfileTab: React.FC = () => {
           <div className="grid w-full items-center gap-4">
             <div className="flex flex-col space-y-1.5 text-white">
               <Label htmlFor="name">Name</Label>
-              <Input id="name" placeholder={getProfileName()} onChange={onInputChange} />
+              <Input id="name" placeholder={name} onChange={onInputChange} />
             </div>
           </div>
         </form>
@@ -53,8 +65,8 @@ const ProfileTab: React.FC = () => {
         <div className="grid w-full items-center gap-4">
           <div className="flex flex-col space-y-1.5 text-white">
             <Label htmlFor="name">Avatar</Label>
-            <Button onClick={setRandomAvatar} className="h-16">
-              <Avatar id={getAvatarState()} winner={false} />
+            <Button onClick={() => saveAvatarLocal(createUUID())} className="h-16">
+              <Avatar id={avatarLocal} winner={false} />
               <p className="m-2">Change avatar</p>
             </Button>
           </div>

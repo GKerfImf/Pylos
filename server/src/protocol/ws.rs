@@ -27,7 +27,9 @@ async fn change_profile_info(
     client_uuid: UserUUID,
     clients: &Clients,
 ) {
-    match clients.lock().await.get_mut(&client_uuid) {
+    let mut clients_guard = clients.lock().await;
+
+    match clients_guard.get_mut(&client_uuid) {
         Some(client) => {
             client.user_name.clone_from(&new_user_name);
             client.user_avatar_uuid.clone_from(&new_user_avatar);
@@ -40,17 +42,18 @@ async fn change_profile_info(
 
     let res = Response::ChangeProfileInfo {
         status: 200,
-        client_uuid,
         user_name: new_user_name,
         user_avatar: new_user_avatar,
     };
 
-    // TODO: do not send response to everyone
-    clients.lock().await.iter_mut().for_each(|(_, client)| {
-        if let Some(sender) = &client.sender {
+    clients_guard
+        .get(&client_uuid)
+        .expect("Client UUID does not exist")
+        .sender
+        .iter()
+        .for_each(|sender| {
             let _ = sender.send(Ok(Message::text(serde_json::to_string(&res).unwrap())));
-        }
-    });
+        });
 }
 
 async fn create_game(

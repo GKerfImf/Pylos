@@ -2,15 +2,14 @@ use crate::{
     logic::board::BoardFrontend,
     state::{
         game::Player, game_configuration::GameConfiguration, game_meta::GameMeta,
-        game_uuid::GameUUID, user_uuid::UserUUID,
+        game_uuid::GameUUID,
     },
 };
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub enum Response {
     ChangeProfileInfo {
-        status: u8,            // TODO?: status u8 -> enum
-        client_uuid: UserUUID, // TODO??: use [old_user_name] instead?
+        status: u8,
         user_name: String,
         user_avatar: String,
     },

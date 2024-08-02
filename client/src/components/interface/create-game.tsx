@@ -8,6 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "src/compon
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select";
 import { TRequest } from "src/types/request";
 import { TCreateGame } from "src/types/response";
+import generateDefaultName from "src/util/default-names";
 import { WebSocketContext } from "src/contexts/ws-context";
 import "src/styles.css";
 
@@ -106,6 +107,9 @@ const Increment: React.FC<{ increment: any; setIncrement: any }> = ({ increment,
 const CreateGameTab: React.FC = () => {
   const navigate = useNavigate();
 
+  const [nameLocal] = useLocalStorage<string>("PylosProfileName", generateDefaultName());
+
+  // TODO?: turn into an object
   const [opponent, setOpponent] = useState<"Human" | "Computer">("Computer");
   const [side, setSide] = useState<"Random" | "AlwaysWhite" | "AlwaysBlack">("Random");
   const [timeControl, setTimeControl] = useState<"unlimited" | "real-time">("unlimited");
@@ -123,22 +127,6 @@ const CreateGameTab: React.FC = () => {
     };
   });
 
-  // TODO: turn into hook
-  // TODO: delete duplicate
-  const entryProfileName = "pylos_profile_name";
-  const getProfileName = () => {
-    const entryID = "pylos_uuid";
-    if (!localStorage.getItem(entryID)) {
-      console.warn("[ProfileTab]: [pylos_uuid] does not exist");
-    }
-
-    if (!localStorage.getItem(entryProfileName)) {
-      return `anon-${localStorage.getItem(entryID)!.slice(0, 8)}`;
-    } else {
-      return localStorage.getItem(entryProfileName)!;
-    }
-  };
-
   const createGame = () => {
     // TODO: implement the time control
     const time_control = timeControl == "unlimited" ? null : "not implemented";
@@ -148,13 +136,12 @@ const CreateGameTab: React.FC = () => {
         game_configuration: {
           game_uuid: null,
           opponent: opponent,
-          creator_name: getProfileName(),
+          creator_name: nameLocal,
           side_selection: side,
           time_control: time_control,
         },
       },
     };
-
     send(req);
   };
 

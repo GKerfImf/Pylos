@@ -178,7 +178,6 @@ function ballsReducer(state: any, action: any) {
       return moveBall(state.selectedBall, action.ball);
     }
     case "SetGameState": {
-      // console.log("hi", action.new_state);
       return action.new_state;
     }
     default: {

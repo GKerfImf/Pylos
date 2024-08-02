@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+const ChangeProfileInfo = z.object({
+  ChangeProfileInfo: z.object({
+    status: z.number(),
+    user_avatar: z.string(),
+    user_name: z.string(),
+  }),
+});
+type TChangeProfileInfo = z.infer<typeof ChangeProfileInfo>;
+
 const GameParticipants = z.object({
   GameParticipants: z.object({
     game_uuid: z.string(),
@@ -48,9 +57,8 @@ const GameState = z.object({
 });
 type TGameState = z.infer<typeof GameState>;
 
-const Response = z.union([GameParticipants, AvailableGames, GameState, CreateGame]);
-
+const Response = z.union([GameParticipants, ChangeProfileInfo, AvailableGames, GameState, CreateGame]);
 type TResponse = z.infer<typeof Response>;
 
 export { Response };
-export { TGameState, TResponse, TAvailableGames, TGameParticipants, TCreateGame };
+export { TGameState, TResponse, TAvailableGames, TGameParticipants, TCreateGame, TChangeProfileInfo };

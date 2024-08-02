@@ -2,7 +2,7 @@ import Ball from "src/types/ball";
 
 type TRequest =
   | {
-      ChangeName: {
+      ChangeProfileInfo: {
         new_user_name: string;
         new_user_avatar: string;
       };
