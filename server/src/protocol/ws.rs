@@ -13,6 +13,7 @@ use crate::{
 use futures::{future::join_all, FutureExt, StreamExt};
 use log::{error, info, warn};
 use serde_json::from_str;
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use uuid::Uuid;
@@ -67,7 +68,7 @@ async fn create_game(
         game_uuid.clone(),
         client_uuid,
         game_configuration,
-        clients.clone(),
+        Arc::clone(clients),
     );
 
     games.lock().await.insert(game_uuid.clone(), game);
