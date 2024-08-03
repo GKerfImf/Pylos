@@ -82,17 +82,17 @@ impl Game {
 
 impl Game {
     pub async fn add_client(&mut self, client_uuid: UserUUID) {
-        self.add_spectator(client_uuid.clone());
+        if !self.spectators.contains(&client_uuid) {
+            self.add_spectator(client_uuid.clone());
 
-        if self.player_slot_is_available() {
-            self.add_player(client_uuid, Player::new_human());
-
-            if self.player_slots_are_taken() {
-                self.game_meta.lock().await.promote_to_in_progress();
-            };
-            self.ping_ai().await;
+            if self.player_slot_is_available() {
+                self.add_player(client_uuid, Player::new_human());
+                if self.player_slots_are_taken() {
+                    self.game_meta.lock().await.promote_to_in_progress();
+                };
+                self.ping_ai().await;
+            }
         }
-
         self.broadcast_participants().await;
     }
 
