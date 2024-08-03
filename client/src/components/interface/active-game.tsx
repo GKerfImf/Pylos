@@ -1,14 +1,13 @@
 import React, { useContext, useEffect, useState } from "react";
-import { WebSocketContext } from "../../contexts/ws-context";
-import { cva } from "class-variance-authority";
-
-import Player from "../../types/player";
-import { cn } from "../../util/cn";
-import { TGameState, TGameParticipants } from "../../types/response";
-import { Badge } from "../../components/ui/badge";
-import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
-import Avatar from "./avatar";
+import { cva } from "class-variance-authority";
+import { cn } from "src/util/cn";
+import { WebSocketContext } from "src/contexts/ws-context";
+import Player from "src/types/player";
+import { TGameState, TGameParticipants } from "src/types/response";
+import { Badge } from "src/components/ui/badge";
+import { Button } from "src/components/ui/button";
+import Avatar from "src/components/interface/avatar";
 
 const PlayerCard: React.FC<{
   color: "white" | "black";
