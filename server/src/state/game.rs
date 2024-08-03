@@ -78,6 +78,56 @@ impl Game {
             game_configuration,
         }
     }
+}
+
+impl Game {
+    pub async fn add_client(&mut self, client_uuid: UserUUID) {
+        self.add_spectator(client_uuid.clone());
+
+        if self.player_slot_is_available() {
+            self.add_player(client_uuid, Player::new_human());
+
+            if self.player_slots_are_taken() {
+                self.game_meta.lock().await.promote_to_in_progress();
+            };
+            self.ping_ai().await;
+        }
+
+        self.broadcast_participants().await;
+    }
+
+    pub async fn emit_board(&self, client_uuid: &UserUUID) {
+        let res = Response::GameState {
+            game_uuid: self.game_uuid.clone(),
+            game_state: BoardFrontend::new(self.board.lock().await.clone()),
+        };
+
+        self.clients
+            .lock()
+            .await
+            .get(&client_uuid)
+            .expect("Client UUID does not exist")
+            .sender
+            .iter()
+            .for_each(|sender| {
+                let _ = sender.send(Ok(Message::text(serde_json::to_string(&res).unwrap())));
+            });
+    }
+
+    pub async fn make_move(&mut self, _client_uuid: &UserUUID, mv: Move) {
+        // TODO: validate [client_uuid] has rights to make a move
+
+        // Execute the move on the board and update the game's meta
+        let _ = self.board.lock().await.make_move(mv);
+        self.game_meta.lock().await.update_last_move_at();
+        if self.board.lock().await.is_game_over() {
+            self.game_meta.lock().await.promote_to_completed();
+        }
+        self.broadcast_board().await;
+
+        // AI broadcasts the board and updates the game's meta, if needed
+        self.ping_ai().await;
+    }
 
     pub async fn get_meta(&self) -> GameMeta {
         self.game_meta.lock().await.clone()
@@ -86,14 +136,15 @@ impl Game {
     pub fn get_description(&self) -> &GameConfiguration {
         &self.game_configuration
     }
+}
 
-    #[allow(clippy::type_complexity)]
-    pub fn get_players(&self) -> (&Option<(UserUUID, Player)>, &Option<(UserUUID, Player)>) {
-        (&self.player_white, &self.player_black)
+impl Game {
+    fn player_slot_is_available(&self) -> bool {
+        self.player_white.is_none() || self.player_black.is_none()
     }
 
-    pub async fn get_board(&self) -> Board {
-        self.board.lock().await.clone()
+    fn player_slots_are_taken(&self) -> bool {
+        self.player_white.is_some() && self.player_black.is_some()
     }
 
     fn get_ai_color(&self) -> Option<PlayerSide> {
@@ -109,8 +160,83 @@ impl Game {
         };
         None
     }
+}
 
-    pub async fn opponent_type_turn(&self) -> Option<PlayerType> {
+impl Game {
+    async fn broadcast_participants(&self) {
+        let clients_guard = self.clients.lock().await;
+
+        let player_white = if let Some((uuid, player)) = &self.player_white {
+            if let Some(client) = clients_guard.get(&uuid) {
+                Some((
+                    client.user_name.clone(),
+                    client.user_avatar_uuid.clone(),
+                    player.clone(),
+                ))
+            } else {
+                Some((
+                    "Disconnected...".to_owned(),
+                    "xxxx".to_owned(),
+                    player.clone(),
+                ))
+            }
+        } else {
+            None
+        };
+
+        let player_black = if let Some((uuid, player)) = &self.player_black {
+            if let Some(client) = clients_guard.get(&uuid) {
+                Some((
+                    client.user_name.clone(),
+                    client.user_avatar_uuid.clone(),
+                    player.clone(),
+                ))
+            } else {
+                Some((
+                    "Disconnected...".to_owned(),
+                    "xxxx".to_owned(),
+                    player.clone(),
+                ))
+            }
+        } else {
+            None
+        };
+
+        let res = Response::GameParticipants {
+            game_uuid: self.game_uuid.clone(),
+            player_white,
+            player_black,
+        };
+
+        clients_guard
+            .iter()
+            .filter(|(uuid, _)| self.spectators.contains(uuid))
+            .for_each(|(_, client)| {
+                if let Some(sender) = &client.sender {
+                    let _ = sender.send(Ok(Message::text(serde_json::to_string(&res).unwrap())));
+                }
+            });
+    }
+
+    async fn broadcast_board(&self) {
+        let res: Response = Response::GameState {
+            game_uuid: self.game_uuid.clone(),
+            game_state: BoardFrontend::new(self.board.lock().await.clone()),
+        };
+
+        self.clients
+            .lock()
+            .await
+            .iter_mut()
+            .filter(|(uuid, _)| self.spectators.contains(uuid))
+            .for_each(|(_, client)| {
+                if let Some(sender) = &client.sender {
+                    let _ = sender.send(Ok(Message::text(serde_json::to_string(&res).unwrap())));
+                }
+            });
+    }
+
+    async fn opponent_type_turn(&self) -> Option<PlayerType> {
         match self.board.lock().await.get_turn() {
             PlayerSide::White => match self.player_white.clone() {
                 Some(player) => Some(player.1.player_type),
@@ -136,6 +262,7 @@ impl Game {
         let clients = Arc::clone(&self.clients);
         let board_clone = Arc::clone(&self.board);
         let game_meta = Arc::clone(&self.game_meta);
+        let spectators_clone = self.spectators.clone();
 
         spawn(async move {
             let mut board_guard = board_clone.lock().await;
@@ -156,12 +283,18 @@ impl Game {
                     game_state: BoardFrontend::new(board_guard.clone()),
                 };
 
-                clients.lock().await.iter_mut().for_each(|(_, client)| {
-                    if let Some(sender) = &client.sender {
-                        let _ =
-                            sender.send(Ok(Message::text(serde_json::to_string(&res).unwrap())));
-                    }
-                });
+                // TODO?: remove duplication
+                clients
+                    .lock()
+                    .await
+                    .iter_mut()
+                    .filter(|(uuid, _)| spectators_clone.contains(uuid))
+                    .for_each(|(_, client)| {
+                        if let Some(sender) = &client.sender {
+                            let _ = sender
+                                .send(Ok(Message::text(serde_json::to_string(&res).unwrap())));
+                        }
+                    });
                 task::yield_now().await;
             }
 
@@ -222,37 +355,5 @@ impl Game {
 
     fn add_spectator(&mut self, client_uuid: UserUUID) {
         self.spectators.push(client_uuid)
-    }
-
-    pub async fn add_client(&mut self, client_uuid: UserUUID) -> Result<(), &'static str> {
-        self.add_spectator(client_uuid.clone());
-
-        if self.player_white.is_none() || self.player_black.is_none() {
-            self.add_player(client_uuid, Player::new_human());
-
-            if self.player_white.is_some() && self.player_black.is_some() {
-                self.game_meta.lock().await.promote_to_in_progress();
-            };
-
-            self.ping_ai().await;
-        };
-
-        Ok(())
-    }
-
-    pub async fn make_move(&mut self, mv: Move) -> Result<(), &'static str> {
-        // TODO: validate [client_uuid] has rights to make a move
-
-        // Execute the move on the board and update the game's meta
-        self.board.lock().await.make_move(mv)?;
-        self.game_meta.lock().await.update_last_move_at();
-        if self.board.lock().await.is_game_over() {
-            self.game_meta.lock().await.promote_to_completed();
-        }
-
-        // AI updates the game's meta, if needed
-        self.ping_ai().await;
-
-        Ok(())
     }
 }

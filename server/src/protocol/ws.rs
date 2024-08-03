@@ -1,5 +1,5 @@
 use crate::{
-    logic::{amove::Move, board::BoardFrontend},
+    logic::amove::Move,
     protocol::{request::Request, response::Response, result::Result},
     state::{
         client::{Client, Clients},
@@ -66,7 +66,7 @@ async fn create_game(
     let game_uuid: String = Uuid::new_v4().simple().to_string();
     let game = Game::new(
         game_uuid.clone(),
-        client_uuid,
+        client_uuid.clone(),
         game_configuration,
         Arc::clone(clients),
     );
@@ -77,12 +77,16 @@ async fn create_game(
         game_uuid,
     };
 
-    // TODO: do not send response to everyone
-    clients.lock().await.iter_mut().for_each(|(_, client)| {
-        if let Some(sender) = &client.sender {
+    clients
+        .lock()
+        .await
+        .get(&client_uuid)
+        .expect("Client UUID does not exist")
+        .sender
+        .iter()
+        .for_each(|sender| {
             let _ = sender.send(Ok(Message::text(serde_json::to_string(&res).unwrap())));
-        }
-    });
+        });
 }
 
 async fn get_available_games(client_uuid: &UserUUID, clients: &Clients, games: &Games) {
@@ -115,11 +119,10 @@ async fn get_available_games(client_uuid: &UserUUID, clients: &Clients, games: &
         });
 }
 
-async fn join_game(client_uuid: UserUUID, game_uuid: String, _clients: &Clients, games: &Games) {
-    let mut locked = games.lock().await;
-    match locked.get_mut(&game_uuid) {
+async fn join_game(client_uuid: UserUUID, game_uuid: String, games: &Games) {
+    match games.lock().await.get_mut(&game_uuid) {
         Some(game) => {
-            let _ = game.add_client(client_uuid).await;
+            game.add_client(client_uuid).await;
         }
         None => {
             warn!("Game uuid does not exist: {}", game_uuid);
@@ -127,121 +130,26 @@ async fn join_game(client_uuid: UserUUID, game_uuid: String, _clients: &Clients,
     };
 }
 
-async fn emit_participants(game_uuid: GameUUID, clients: &Clients, games: &Games) {
-    let (uuid_player_white, uuid_player_black) = {
-        let mut locked = games.lock().await;
-        match locked.get_mut(&game_uuid) {
-            Some(game) => (game.get_players().0.clone(), game.get_players().1.clone()),
-            None => {
-                warn!("Game uuid does not exist: {}", game_uuid);
-                return;
-            }
-        }
-    };
-
-    let (player_white, player_black) = {
-        let locked = clients.lock().await;
-
-        let white = if let Some((uuid, player)) = uuid_player_white {
-            Some((
-                locked
-                    .get(&uuid)
-                    .map(|client| client.user_name.clone())
-                    .unwrap_or("Disconnected...".to_owned()),
-                locked
-                    .get(&uuid)
-                    .map(|client| client.user_avatar_uuid.clone())
-                    .unwrap_or("000".to_owned()),
-                player,
-            ))
-        } else {
-            None
-        };
-
-        let black = if let Some((uuid, player)) = uuid_player_black {
-            Some((
-                locked
-                    .get(&uuid)
-                    .map(|client| client.user_name.clone())
-                    .unwrap_or("Disconnected...".to_owned()),
-                locked
-                    .get(&uuid)
-                    .map(|client| client.user_avatar_uuid.clone())
-                    .unwrap_or("000".to_owned()),
-                player,
-            ))
-        } else {
-            None
-        };
-
-        (white, black)
-    };
-
-    let res = Response::GameParticipants {
-        game_uuid,
-        player_white,
-        player_black,
-    };
-
-    // TODO: do not send response to everyone
-    clients.lock().await.iter().for_each(|(_, client)| {
-        if let Some(sender) = &client.sender {
-            let _ = sender.send(Ok(Message::text(serde_json::to_string(&res).unwrap())));
-        }
-    });
-}
-
-async fn get_game_state(game_uuid: String, clients: &Clients, games: &Games) {
-    let mut locked = games.lock().await;
-    let board = match locked.get_mut(&game_uuid) {
-        Some(game) => game.get_board(),
+async fn get_game_state(client_uuid: &UserUUID, game_uuid: &String, games: &Games) {
+    match games.lock().await.get_mut(game_uuid) {
+        Some(game) => game.emit_board(client_uuid).await,
         None => {
             warn!("Game uuid does not exist: {}", game_uuid);
             return;
         }
     };
-
-    let res = Response::GameState {
-        game_uuid,
-        game_state: BoardFrontend::new(board.await),
-    };
-
-    // TODO: do not send response to everyone
-    clients.lock().await.iter_mut().for_each(|(_, client)| {
-        if let Some(sender) = &client.sender {
-            let _ = sender.send(Ok(Message::text(serde_json::to_string(&res).unwrap())));
-        }
-    });
 }
 
-async fn make_move(
-    mv: Move,
-    game_uuid: String,
-    _client_uuid: &UserUUID,
-    clients: &Clients,
-    games: &Games,
-) {
-    let mut locked = games.lock().await;
-    let res: Response = match locked.get_mut(&game_uuid) {
+async fn make_move(mv: Move, game_uuid: &String, client_uuid: &UserUUID, games: &Games) {
+    match games.lock().await.get_mut(game_uuid) {
         Some(game) => {
-            let _ = game.make_move(mv).await; // TODO: handle the result
-            Response::GameState {
-                game_uuid,
-                game_state: BoardFrontend::new(game.get_board().await),
-            }
+            let _ = game.make_move(client_uuid, mv).await; // TODO: handle the result
         }
         None => {
             warn!("Game uuid does not exists {}", game_uuid);
             return;
         }
     };
-
-    // TODO: do not send response to everyone
-    clients.lock().await.iter_mut().for_each(|(_, client)| {
-        if let Some(sender) = &client.sender {
-            let _ = sender.send(Ok(Message::text(serde_json::to_string(&res).unwrap())));
-        }
-    });
 }
 
 // TODO: use proper type for [client_uuid]
@@ -274,14 +182,14 @@ async fn process_client_msg(client_uuid: UserUUID, msg: Message, clients: &Clien
         }
         Request::GetAvailableGames {} => get_available_games(&client_uuid, clients, games).await,
         Request::JoinGame { game_uuid } => {
-            join_game(client_uuid, game_uuid.clone(), clients, games).await;
-            emit_participants(game_uuid, clients, games).await;
-
+            join_game(client_uuid, game_uuid.clone(), games).await;
             // TODO: also update participants when someone leaves
         }
-        Request::GetGameState { game_uuid } => get_game_state(game_uuid, clients, games).await,
+        Request::GetGameState { game_uuid } => {
+            get_game_state(&client_uuid, &game_uuid, games).await
+        }
         Request::MakeMove { game_uuid, mv } => {
-            make_move(mv, game_uuid.clone(), &client_uuid, clients, games).await;
+            make_move(mv, &game_uuid, &client_uuid, games).await;
         }
     };
 }
