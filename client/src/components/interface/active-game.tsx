@@ -20,8 +20,8 @@ const PlayerCard: React.FC<{
   const badgeVariants = cva("rounded-sm mr-1 px-2 items-center text-xs", {
     variants: {
       color: {
-        white: "border-slate-400 text-slate-900 blur",
-        black: "border-slate-600 text-slate-100 blur",
+        white: "border-slate-400 text-slate-900 ",
+        black: "border-slate-600 text-slate-100 ",
       },
     },
   });
@@ -49,10 +49,10 @@ const PlayerCard: React.FC<{
       <div className="flex-1 space-y-1">
         <p className="text-sm font-bold leading-none">{playerName}</p>
         <Badge variant="outline" className={cn(badgeVariants({ color }), "")}>
-          Time: 5:00
+          Time: ∞
         </Badge>
         <Badge variant="outline" className={cn(badgeVariants({ color }), "")}>
-          Ping: 140ms
+          Ping: ??ms
         </Badge>
       </div>
     );
