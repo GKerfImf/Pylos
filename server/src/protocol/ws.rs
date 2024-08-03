@@ -135,7 +135,6 @@ async fn get_game_state(client_uuid: &UserUUID, game_uuid: &String, games: &Game
         Some(game) => game.emit_board(client_uuid).await,
         None => {
             warn!("Game uuid does not exist: {}", game_uuid);
-            return;
         }
     };
 }
@@ -147,7 +146,6 @@ async fn make_move(mv: Move, game_uuid: &String, client_uuid: &UserUUID, games: 
         }
         None => {
             warn!("Game uuid does not exists {}", game_uuid);
-            return;
         }
     };
 }

@@ -105,7 +105,7 @@ impl Game {
         self.clients
             .lock()
             .await
-            .get(&client_uuid)
+            .get(client_uuid)
             .expect("Client UUID does not exist")
             .sender
             .iter()
@@ -167,7 +167,7 @@ impl Game {
         let clients_guard = self.clients.lock().await;
 
         let player_white = if let Some((uuid, player)) = &self.player_white {
-            if let Some(client) = clients_guard.get(&uuid) {
+            if let Some(client) = clients_guard.get(uuid) {
                 Some((
                     client.user_name.clone(),
                     client.user_avatar_uuid.clone(),
@@ -185,7 +185,7 @@ impl Game {
         };
 
         let player_black = if let Some((uuid, player)) = &self.player_black {
-            if let Some(client) = clients_guard.get(&uuid) {
+            if let Some(client) = clients_guard.get(uuid) {
                 Some((
                     client.user_name.clone(),
                     client.user_avatar_uuid.clone(),
