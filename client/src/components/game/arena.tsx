@@ -1,7 +1,9 @@
-import React, { useContext, useEffect, useReducer } from "react";
+import React, { useContext, useEffect, useReducer, useState } from "react";
+import { useLocalStorage } from "@uidotdev/usehooks";
 import _ from "lodash";
 import range from "src/util/range";
 import cartesian from "src/util/cart";
+import createUUID from "src/util/uuid";
 import Ball from "src/types/ball";
 import Board from "src/types/board";
 import Player from "src/types/player";
@@ -11,7 +13,7 @@ import TypedMap from "src/types/typed_map";
 import { Sphere, GhostSphere } from "src/components/game/spheres";
 import { WebSocketContext } from "src/contexts/ws-context";
 import { useParams } from "react-router-dom";
-import { TGameState } from "src/types/response";
+import { TGameParticipants, TGameState } from "src/types/response";
 const Platform = React.lazy(() => import("src/components/game/platform"));
 
 function findParents(index: Index3D): Index3D[] {
@@ -119,7 +121,11 @@ function getGhostBalls(state: any, selectedBall: Ball): Ball[] {
     .map((index: Index3D) => ({ player: selectedBall.player, index: index }));
 }
 
-const isClickable = (state: any, ball: Ball) => {
+const isClickable = (state: any, ball: Ball, side: Player | null) => {
+  if (ball.player != side) {
+    return false;
+  }
+
   if (ball.player != state.turn) {
     return false;
   }
@@ -190,6 +196,8 @@ function ballsReducer(state: any, action: any) {
 function Arena() {
   console.debug("[Arena]");
   let { id } = useParams();
+  const [avatarLocal] = useLocalStorage<string>("PylosProfileAvatar", createUUID());
+  const [side, setSide] = useState<Player | null>(null);
 
   const [state, dispatch] = useReducer(ballsReducer, {
     nmove: null,
@@ -216,6 +224,27 @@ function Arena() {
     };
   }, []);
 
+  useEffect(() => {
+    subscribe("GameParticipants", "Arena", (req: TGameParticipants) => {
+      if (req.GameParticipants.player_white != null) {
+        let pw = req.GameParticipants.player_white;
+        if (pw[1] == avatarLocal && pw[2].player_type == "Human") {
+          setSide(Player.White);
+        }
+      }
+
+      if (req.GameParticipants.player_black != null) {
+        let pw = req.GameParticipants.player_black;
+        if (pw[1] == avatarLocal && pw[2].player_type == "Human") {
+          setSide(Player.Black);
+        }
+      }
+    });
+    return () => {
+      unsubscribe("GameParticipants", "Arena");
+    };
+  }, []);
+
   return (
     <group>
       {state.balls.map((ball: Ball) => {
@@ -225,12 +254,12 @@ function Arena() {
             key={JSON.stringify(ball)}
             id={ball}
             isClicked={_.isEqual(ball, state.selectedBall)}
-            isClickable={isClickable(state, ball)}
+            isClickable={isClickable(state, ball, side)}
             color={ball.player == Player.White ? "white" : "black"}
             position={[cX, cZ, cY]}
             onClick={(e: any) => {
               e.stopPropagation();
-              if (isClickable(state, ball)) {
+              if (isClickable(state, ball, side)) {
                 if (_.isEqual(state.selectedBall, ball)) {
                   dispatch({ type: "SelectBall", ball: null });
                 } else {
