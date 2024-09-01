@@ -48,10 +48,10 @@ const PlayerCard: React.FC<{
     return (
       <div className="flex-1 space-y-1">
         <p className="text-sm font-bold leading-none">{playerName}</p>
-        <Badge variant="outline" className={cn(badgeVariants({ color }), "")}>
+        <Badge variant="outline" className={cn(badgeVariants({ color }), "invisible")}>
           Time: ∞
         </Badge>
-        <Badge variant="outline" className={cn(badgeVariants({ color }), "")}>
+        <Badge variant="outline" className={cn(badgeVariants({ color }), "invisible")}>
           Ping: ??ms
         </Badge>
       </div>
