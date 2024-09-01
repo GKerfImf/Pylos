@@ -24,4 +24,4 @@ export default function Platform() {
     </group>
   );
 }
-useGLTF.preload("./models/pylos.glb");
+useGLTF.preload("/models/pylos.glb");

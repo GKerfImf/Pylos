@@ -72,7 +72,6 @@ async fn main() {
     let users_routes = users
         .and(warp::post())
         .and(warp::body::json())
-        // .and(warp::path::param())
         .and(with_clients(clients.clone()))
         .and_then(register_handler)
         .or(users
@@ -90,7 +89,7 @@ async fn main() {
 
     let static_files = warp::path("static").and(warp::fs::dir("static"));
     let models = warp::path("models").and(warp::fs::dir("static/models"));
-    let index = warp::path::end().and(warp::fs::file("static/index.html"));
+    let react_routes = warp::fs::file("static/index.html");
 
     let cors = warp::cors()
         .allow_any_origin()
@@ -115,8 +114,8 @@ async fn main() {
         .or(users_routes)
         .or(ws_route)
         .or(static_files)
-        .or(index)
         .or(models)
+        .or(react_routes)
         .with(cors);
 
     warp::serve(routes).run(([0, 0, 0, 0], 8000)).await;

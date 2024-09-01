@@ -6,8 +6,8 @@ import { Response, TResponse } from "src/types/response";
 import generateDefaultName from "src/util/default-names";
 import createUUID from "src/util/uuid";
 
-// const url = window.location.host;
-const url = "localhost:8000";
+const url = window.location.host;
+// const url = "localhost:8000";
 
 const registerClient = async (
   userName: String,
