@@ -10,6 +10,7 @@ use crate::{
         user_uuid::UserUUID,
     },
 };
+use chrono::{DateTime, Duration, Utc};
 use futures::{future::join_all, FutureExt, StreamExt};
 use log::{error, info, warn};
 use serde_json::from_str;
@@ -90,6 +91,10 @@ async fn create_game(
 }
 
 async fn get_available_games(client_uuid: &UserUUID, clients: &Clients, games: &Games) {
+    fn is_two_weeks_ago_or_later(date: DateTime<Utc>) -> bool {
+        Utc::now() <= date + Duration::weeks(2)
+    }
+
     let available_games: Vec<(GameUUID, GameMeta, GameConfiguration)> = {
         let games_guard = games.lock().await;
         let futures = games_guard.iter().map(|(game_uuid, game)| {
@@ -103,7 +108,10 @@ async fn get_available_games(client_uuid: &UserUUID, clients: &Clients, games: &
             }
         });
         join_all(futures).await
-    };
+    }
+    .into_iter()
+    .filter(|game| is_two_weeks_ago_or_later(game.1.created_at))
+    .collect();
 
     let res = Response::AvailableGames { available_games };
 
