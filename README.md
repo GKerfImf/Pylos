@@ -48,3 +48,7 @@ To spin up a local version of the game, follow these steps (tested on `macOS Son
 Frontend: [`Typescript`](https://www.typescriptlang.org/) with [`React`](https://react.dev/), [`Threejs`](https://threejs.org/), and [`Tailwind-css`](https://tailwindcss.com/)
 
 Backend: [`Rust`](https://www.rust-lang.org/) with [`Tokio`](https://tokio.rs/) and [`Warp`](https://github.com/seanmonstar/warp).
+
+## License
+
+Distributed under the MIT License. See `LICENSE` for more information.
