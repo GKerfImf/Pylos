@@ -1,28 +1,22 @@
 import React, { useState } from "react";
 import { Outlines } from "@react-three/drei";
+import { Vector3 } from "three";
 import _ from "lodash";
+import Ball from "src/types/ball";
 
-function Sphere({
-  id,
-  onClick,
-  color,
-  isClicked,
-  isClickable,
-  position,
-  ...props
-}: {
-  id: any;
-  onClick: any;
-  color: any;
-  isClicked: any;
-  isClickable: any;
-  position: any;
-}) {
-  console.debug("Render [Sphere]", id);
+type SphereProps = {
+  id: Ball;
+  onClick: (e: any) => void;
+  color: "white" | "black";
+  isClicked: boolean;
+  isClickable: boolean;
+  position: Vector3;
+};
 
-  const [hover, setHover] = useState(false);
-
+function Sphere({ id, onClick, color, isClicked, isClickable, position, ...props }: SphereProps) {
   const scale = 0.5;
+  const [hover, setHover] = useState(false);
+  const emissiveIntensity = (isClickable && (hover || isClicked) ? 0.4 : 0) * (color == "white" ? 5 : 1);
 
   const onPointerOver = (e: any) => {
     e.stopPropagation();
@@ -37,8 +31,6 @@ function Sphere({
       setHover(false);
     }
   };
-
-  const emissiveIntensity = (isClickable && (hover || isClicked) ? 0.4 : 0) * (color == "white" ? 5 : 1);
 
   return (
     <mesh
@@ -63,23 +55,16 @@ function Sphere({
   );
 }
 
-const GhostSphere = ({
-  id,
-  onClick,
-  color,
-  position,
-  ...props
-}: {
-  id: any;
-  onClick: any;
-  color: any;
-  position: any;
-}) => {
-  console.debug("Render [GhostSphere]", id);
+type GhostSphereProps = {
+  id: Ball;
+  onClick: (e: any) => void;
+  color: "white" | "black";
+  position: Vector3;
+};
 
-  const [hover, setHover] = useState(false);
-
+const GhostSphere = ({ id, onClick, color, position, ...props }: GhostSphereProps) => {
   const scale = 0.5;
+  const [hover, setHover] = useState(false);
 
   const onPointerOver = (e: any) => {
     e.stopPropagation();
@@ -107,11 +92,13 @@ const GhostSphere = ({
   );
 };
 
-function BlackGhostSphere({ id, onClick, position, ...props }: { id: any; onClick: any; position: any }) {
+type ColoredGhostSphereProps = { id: Ball; onClick: (e: any) => void; position: Vector3 };
+
+function BlackGhostSphere({ id, onClick, position, ...props }: ColoredGhostSphereProps) {
   return <GhostSphere id={id} onClick={onClick} color="black" position={position} {...props} />;
 }
 
-function WhiteGhostSphere({ id, onClick, position, ...props }: { id: any; onClick: any; position: any }) {
+function WhiteGhostSphere({ id, onClick, position, ...props }: ColoredGhostSphereProps) {
   return <GhostSphere id={id} onClick={onClick} color="white" position={position} {...props} />;
 }
 

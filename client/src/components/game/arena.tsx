@@ -14,6 +14,7 @@ import { Sphere, GhostSphere } from "src/components/game/spheres";
 import { WebSocketContext } from "src/contexts/ws-context";
 import { useParams } from "react-router-dom";
 import { TGameParticipants, TGameState } from "src/types/response";
+import { Vector3 } from "three";
 const Platform = React.lazy(() => import("src/components/game/platform"));
 
 function findParents(index: Index3D): Index3D[] {
@@ -256,7 +257,7 @@ function Arena() {
             isClicked={_.isEqual(ball, state.selectedBall)}
             isClickable={isClickable(state, ball, side)}
             color={ball.player == Player.White ? "white" : "black"}
-            position={[cX, cZ, cY]}
+            position={new Vector3(cX, cZ, cY)}
             onClick={(e: any) => {
               e.stopPropagation();
               if (isClickable(state, ball, side)) {
@@ -278,7 +279,7 @@ function Arena() {
                 key={JSON.stringify(ball)}
                 id={ball}
                 color={state.selectedBall.player == Player.White ? "white" : "black"}
-                position={[cX, cZ, cY]}
+                position={new Vector3(cX, cZ, cY)}
                 onClick={(e: any) => {
                   e.stopPropagation();
                   dispatch({ type: "SelectGhostBall", ball: ball });
