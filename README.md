@@ -2,7 +2,7 @@
 
 This repository contains an implementation of the Pylos board game. Pylos is a strategic abstract board game where two players compete to place their spheres at the top of a pyramid. The game, designed by David G. Royffe, requires tactical thinking and careful planning to outmaneuver your opponent.
 
-The game is hosted on a DigitalOcean droplet at http://142.93.162.12:8000.
+The game is hosted on a DigitalOcean droplet at http://164.92.249.93:8000.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/GKerfImf/Pylos/main/resources/screenshot_main.png" width="500"/>
